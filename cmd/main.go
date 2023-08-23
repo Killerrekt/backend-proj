@@ -1,12 +1,15 @@
 package main
 
 import (
+	"log"
+
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/cors"
 	"github.com/gofiber/fiber/v2/middleware/logger"
-	"log"
+
 	config "www.github.com/ic-ETITE-24/icetite-24-backend/config"
 	"www.github.com/ic-ETITE-24/icetite-24-backend/internal/database"
+	"www.github.com/ic-ETITE-24/icetite-24-backend/routes"
 )
 
 func main() {
@@ -16,6 +19,7 @@ func main() {
 	if err != nil {
 		log.Fatalln("Failed to load environment variables! \n", err.Error())
 	}
+
 	database.ConnectDB(&config)
 	database.RunMigrations(database.DB)
 
@@ -30,7 +34,7 @@ func main() {
 
 	apiGroup := app.Group("/v1")
 
-	//routes.AuthRoutes(apiGroup)
+	// routes.AuthRoutes(apiGroup)
 
 	apiGroup.Get("/healthcheck", func(c *fiber.Ctx) error {
 		return c.Status(200).JSON(fiber.Map{
@@ -45,6 +49,8 @@ func main() {
 			"message": "Route not found",
 		})
 	})
+
+	routes.UserRoutes(app)
 
 	log.Fatal(app.Listen(config.Port))
 }
