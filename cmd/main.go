@@ -43,14 +43,14 @@ func main() {
 		})
 	})
 
+	routes.UserRoutes(app)
+
 	app.Use(func(c *fiber.Ctx) error {
 		return c.Status(404).JSON(fiber.Map{
 			"status":  "error",
 			"message": "Route not found",
 		})
 	})
-
-	routes.UserRoutes(app)
 
 	log.Fatal(app.Listen(config.Port))
 }
