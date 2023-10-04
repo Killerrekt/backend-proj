@@ -16,7 +16,7 @@ type User struct {
 	Gender       string    `json:"gender"`
 	DateOfBirth  time.Time `json:"date_of_birth"`
 	Bio          string    `json:"bio"`
-	TeamId       int       `json:"team_id"` // TODO: Link to team model
+	TeamId       int       `json:"team_id"`
 	IsLeader     bool      `json:"is_leader"`
 	IsApproved   bool      `json:"is_approved"`
 	PhoneNumber  string    `json:"phone_number"`
