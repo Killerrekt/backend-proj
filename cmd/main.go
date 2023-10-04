@@ -9,7 +9,7 @@ import (
 
 	config "www.github.com/ic-ETITE-24/icetite-24-backend/config"
 	"www.github.com/ic-ETITE-24/icetite-24-backend/internal/database"
-	"www.github.com/ic-ETITE-24/icetite-24-backend/routes"
+	"www.github.com/ic-ETITE-24/icetite-24-backend/internal/routes"
 )
 
 func main() {
