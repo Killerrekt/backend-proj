@@ -15,11 +15,19 @@ jobs:
 
       - name: SSH into Server and Pull Repository
         run: |
-          sshpass -p ${{ secrets.SSH_PASSWORD }} ssh ${{ secrets.SERVER_USERNAME }}@${{ secrets.SERVER_HOST }} -p 22 "cd icetite-24-backend && git pull origin main"
+          ssh ${{ secrets.SERVER_USERNAME }}@${{ secrets.SERVER_HOST }} -p 22 "cd icetite-24-backend && git pull origin main" << EOF
+${{ secrets.SSH_PASSWORD }}
+EOF
+        env:
+          SSH_AUTH_SOCK: /dev/null  # Disable SSH agent for password-based authentication
 
       - name: Run Makefile Command
         run: |
-          sshpass -p ${{ secrets.SSH_PASSWORD }} ssh ${{ secrets.SERVER_USERNAME }}@${{ secrets.SERVER_HOST }} -p 22 "cd icetite-24-backend && make build"
+          ssh ${{ secrets.SERVER_USERNAME }}@${{ secrets.SERVER_HOST }} -p 22 "cd icetite-24-backend && make build" << EOF
+${{ secrets.SSH_PASSWORD }}
+EOF
+        env:
+          SSH_AUTH_SOCK: /dev/null
 
       - name: Health Check
         run: |
@@ -32,4 +40,3 @@ jobs:
           fi
 
 # Don't forget to set your secrets in the GitHub repository settings for SSH_PASSWORD, SERVER_HOST, SERVER_USERNAME, and SERVER_PORT.
-
