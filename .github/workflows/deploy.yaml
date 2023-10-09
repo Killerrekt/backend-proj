@@ -15,17 +15,13 @@ jobs:
 
       - name: SSH into Server and Pull Repository
         run: |
-          ssh ${{ secrets.SERVER_USERNAME }}@${{ secrets.SERVER_HOST }} -p 22 "cd icetite-24-backend && git pull origin main" << EOF
-${{ secrets.SSH_PASSWORD }}
-EOF
+          ssh ${{ secrets.SERVER_USERNAME }}@${{ secrets.SERVER_HOST }} -p 22 "cd icetite-24-backend && git pull origin main" << EOF 
         env:
           SSH_AUTH_SOCK: /dev/null  # Disable SSH agent for password-based authentication
 
       - name: Run Makefile Command
         run: |
           ssh ${{ secrets.SERVER_USERNAME }}@${{ secrets.SERVER_HOST }} -p 22 "cd icetite-24-backend && make build" << EOF
-${{ secrets.SSH_PASSWORD }}
-EOF
         env:
           SSH_AUTH_SOCK: /dev/null
 
