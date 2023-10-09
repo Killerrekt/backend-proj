@@ -5,7 +5,7 @@ DOCKER_COMPOSE = docker-compose
 .PHONY: build up down logs restart clean
 
 build:
-	$(DOCKER_COMPOSE) build
+	$(DOCKER_COMPOSE) up --build -d
 
 up:
 	$(DOCKER_COMPOSE) up -d

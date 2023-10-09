@@ -1,0 +1,35 @@
+name: Deploy and Health Check
+
+on:
+  push:
+    branches:
+      - main # Replace with your desired branch
+
+jobs:
+  deploy_and_check:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v2
+
+      - name: SSH into Server and Pull Repository
+        run: |
+          sshpass -p ${{ secrets.SSH_PASSWORD }} ssh ${{ secrets.SERVER_USERNAME }}@${{ secrets.SERVER_HOST }} -p 22 "cd icetite-24-backend && git pull origin main"
+
+      - name: Run Makefile Command
+        run: |
+          sshpass -p ${{ secrets.SSH_PASSWORD }} ssh ${{ secrets.SERVER_USERNAME }}@${{ secrets.SERVER_HOST }} -p 22 "cd icetite-24-backend && make build"
+
+      - name: Health Check
+        run: |
+          health_check_result=$(curl -sS http://localhost:8080/ping)
+          if [[ "$health_check_result" == "pong" ]]; then
+            echo "Health check successful: pong received."
+          else
+            echo "Health check failed: Expected 'pong', but received '$health_check_result'."
+            exit 1
+          fi
+
+# Don't forget to set your secrets in the GitHub repository settings for SSH_PASSWORD, SERVER_HOST, SERVER_USERNAME, and SERVER_PORT.
+
