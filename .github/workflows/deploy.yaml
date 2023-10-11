@@ -1,38 +1,23 @@
-name: Deploy and Health Check
+name: Build and Deploy to Server
 
 on:
   push:
     branches:
-      - main # Replace with your desired branch
+      - main # Adjust the branch as needed
 
 jobs:
-  deploy_and_check:
+  Deploy:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout Repository
-        uses: actions/checkout@v2
-
-      - name: SSH into Server and Pull Repository
-        run: |
-          ssh ${{ secrets.SERVER_USERNAME }}@${{ secrets.SERVER_HOST }} -p 22 "cd icetite-24-backend && git pull origin main" << EOF 
-        env:
-          SSH_AUTH_SOCK: /dev/null  # Disable SSH agent for password-based authentication
-
-      - name: Run Makefile Command
-        run: |
-          ssh ${{ secrets.SERVER_USERNAME }}@${{ secrets.SERVER_HOST }} -p 22 "cd icetite-24-backend && make build" << EOF
-        env:
-          SSH_AUTH_SOCK: /dev/null
-
-      - name: Health Check
-        run: |
-          health_check_result=$(curl -sS http://localhost:8080/ping)
-          if [[ "$health_check_result" == "pong" ]]; then
-            echo "Health check successful: pong received."
-          else
-            echo "Health check failed: Expected 'pong', but received '$health_check_result'."
-            exit 1
-          fi
-
-# Don't forget to set your secrets in the GitHub repository settings for SSH_PASSWORD, SERVER_HOST, SERVER_USERNAME, and SERVER_PORT.
+      - name: SSH and Deploy
+        uses: appleboy/ssh-action@v1.0.0
+        with:
+          host: ${{ secrets.SERVER_HOST }}
+          username: ${{ secrets.SERVER_USERNAME }}
+          password: ${{ secrets.SSH_PASSWORD }}
+          port: 22
+          script: |
+            cd icetite-24-backend/
+            git pull origin main 
+            echo "${{ secrets.SSH_KEY }}" | sudo -S docker-compose up -d --build
