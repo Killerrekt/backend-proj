@@ -23,6 +23,7 @@ type User struct {
 	College      string    `json:"college"`
 	Github       string    `json:"github"`
 	TokenVersion int       `json:"token_version" gorm:"default:0"`
+	OTP          int       `json:"otp"           gorm:"default:0"`
 }
 
 type CreateUser struct {
