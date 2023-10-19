@@ -14,6 +14,6 @@ func UserRoutes(incomingRoutes *fiber.App) {
 	incomingRoutes.Get("/users/logout", middleware.VerifyAccessToken, controller.Logout)
 	incomingRoutes.Get("/users/forgotpassword/:email", controller.ForgotPassword)
 	incomingRoutes.Post("/users/resetpassword/:Token", controller.ResetPassword)
-	incomingRoutes.Get("/users/sendOTP/:email", controller.SendOTP)
-	incomingRoutes.Get("/users/verifyOTP", controller.VerifyOTP)
+	incomingRoutes.Get("/users/sendOTP/:email", controller.SendVerifyUserOTP)
+	incomingRoutes.Get("/users/verifyOTP", controller.VerifyUserOTP)
 }
