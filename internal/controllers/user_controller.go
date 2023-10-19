@@ -58,7 +58,7 @@ func ForgotPassword(c *fiber.Ctx) error {
 
 	var check models.User
 	database.DB.Find(&check, "email = ?", email)
-	if (check == models.User{}) {
+	if check.ID == 0 {
 		return c.Status(fiber.StatusBadRequest).JSON(&fiber.Map{
 			"Status": false,
 			"Error":  "The email address given doesn't exist",
@@ -137,7 +137,7 @@ func ResetPassword(c *fiber.Ctx) error {
 		email := decoded["email"]
 		var user models.User
 		database.DB.Find(&user, "email = ?", email)
-		if (user == models.User{}) {
+		if user.ID == 0 {
 			return c.Status(fiber.StatusBadRequest).JSON(&fiber.Map{
 				"Error": "The email doesn't exist",
 			})
