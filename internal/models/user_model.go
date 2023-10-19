@@ -24,6 +24,7 @@ type User struct {
 	Github       string    `json:"github"`
 	TokenVersion int       `json:"token_version" gorm:"default:0"`
 	OTP          int       `json:"otp"           gorm:"default:0"`
+	Invoice      []Invoice   `gorm:"foreignKey:UserId;References:ID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE"`
 }
 
 type CreateUser struct {
