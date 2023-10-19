@@ -14,6 +14,7 @@ type User struct {
 	Role         string    `json:"role"          gorm:"default:user"`
 	Password     string    `json:"password"`
 	Gender       string    `json:"gender"`
+	Country      string    `json:"country"`
 	DateOfBirth  time.Time `json:"date_of_birth"`
 	Bio          string    `json:"bio"`
 	TeamId       int       `json:"team_id"`
@@ -24,7 +25,7 @@ type User struct {
 	Github       string    `json:"github"`
 	TokenVersion int       `json:"token_version" gorm:"default:0"`
 	OTP          int       `json:"otp"           gorm:"default:0"`
-	Invoice      []Invoice   `gorm:"foreignKey:UserId;References:ID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE"`
+	Invoice      []Invoice `                     gorm:"foreignKey:UserId;References:ID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE"`
 }
 
 type CreateUser struct {
@@ -38,4 +39,5 @@ type CreateUser struct {
 	PhoneNumber string `json:"phone_number"`
 	College     string `json:"college"`
 	Github      string `json:"github"`
+	Country     string `json:"country"`
 }
