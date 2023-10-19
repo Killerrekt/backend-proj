@@ -2,6 +2,7 @@ package controllers
 
 import (
 	"fmt"
+	"math/rand"
 	"time"
 
 	"github.com/gofiber/fiber/v2"
@@ -70,7 +71,12 @@ func ForgotPassword(c *fiber.Ctx) error {
 		Version: 0,
 	}
 
-	resetToken, err := utils.CreateToken(time.Minute*2, payload, utils.REFRESH_TOKEN, viper.GetString("RESET_SECRET_KEY"))
+	resetToken, err := utils.CreateToken(
+		time.Minute*2,
+		payload,
+		utils.REFRESH_TOKEN,
+		viper.GetString("RESET_SECRET_KEY"),
+	)
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(&fiber.Map{
 			"Status": false,
@@ -78,12 +84,13 @@ func ForgotPassword(c *fiber.Ctx) error {
 		})
 	}
 
-	url := fmt.Sprintf("%s%s", viper.GetString("URL"), resetToken)
+	url := fmt.Sprintf("%s%s", viper.GetString("RESET_PASSWORD_URL"), resetToken)
 	message := fmt.Sprintf("%s\n%s %s\n%s",
-		"This is an auto generated email.",
 		"Click the link below to reset your password",
 		url,
-		"If this request was not sent by you please report to the concerned authorities")
+		"If this request was not sent by you please report to the concerned authorities",
+		"This is an auto generated email.",
+	)
 
 	err = utils.SendMail("Password Reset", email, message)
 
@@ -101,7 +108,11 @@ func ForgotPassword(c *fiber.Ctx) error {
 }
 
 func ResetPassword(c *fiber.Ctx) error {
-	token := c.Params("Token")
+	token := c.Params("Token", "")
+
+	if token == "" {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"message": "Invalid token"})
+	}
 
 	type Password struct {
 		Password     string `json:"password"`
@@ -128,7 +139,7 @@ func ResetPassword(c *fiber.Ctx) error {
 		database.DB.Find(&user, "email = ?", email)
 		if (user == models.User{}) {
 			return c.Status(fiber.StatusBadRequest).JSON(&fiber.Map{
-				"Error": "The email doesn't exists",
+				"Error": "The email doesn't exist",
 			})
 		}
 
@@ -153,4 +164,62 @@ func ResetPassword(c *fiber.Ctx) error {
 		})
 	}
 	return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"message": "Invalid Token"})
+}
+
+func SendOTP(c *fiber.Ctx) error {
+	email := c.Params("email", "")
+
+	if email == "" {
+		return c.Status(fiber.StatusBadRequest).
+			JSON(fiber.Map{"message": "Please give a valid email"})
+	}
+
+	otp := rand.Intn(900000) + 100000
+
+	var user models.User
+	database.DB.Find(&user, "email = ?", email)
+
+	if user.ID == 0 {
+		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"message": "User does not exist"})
+	}
+
+	if err := utils.SendMail("OTP", fmt.Sprintf("Your OTP is: %d", otp), email); err != nil {
+		return c.Status(fiber.StatusInternalServerError).
+			JSON(fiber.Map{"message": "Some error occurred", "error": err.Error()})
+	}
+
+	user.OTP = otp
+	database.DB.Save(&user)
+
+	return c.Status(fiber.StatusOK).JSON(fiber.Map{"message": "Otp sent to your Email", "OTP": otp})
+}
+
+func VerifyOTP(c *fiber.Ctx) error {
+	var verifyRequest struct {
+		Email string `json:"email"`
+		OTP   int    `json:"otp"`
+	}
+
+	if err := c.BodyParser(&verifyRequest); err != nil {
+		return c.Status(fiber.StatusBadRequest).
+			JSON(fiber.Map{"message": "Please pass in the correct data"})
+	}
+
+	if verifyRequest.Email == "" {
+		return c.Status(fiber.StatusBadRequest).
+			JSON(fiber.Map{"message": "Please give a valid email"})
+	}
+
+	var user models.User
+	database.DB.Find(&user, "email = ?", verifyRequest.Email)
+
+	if user.ID == 0 {
+		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"message": "User Not Found"})
+	}
+
+	if user.OTP != verifyRequest.OTP {
+		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"message": "Invalid OTP"})
+	}
+
+	return c.Status(fiber.StatusOK).JSON(fiber.Map{"message": "Verified OTP"})
 }
