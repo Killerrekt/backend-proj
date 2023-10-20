@@ -7,7 +7,7 @@ import (
 	"github.com/gofiber/fiber/v2/middleware/cors"
 	"github.com/gofiber/fiber/v2/middleware/logger"
 
-	config "www.github.com/ic-ETITE-24/icetite-24-backend/config"
+	"www.github.com/ic-ETITE-24/icetite-24-backend/config"
 	"www.github.com/ic-ETITE-24/icetite-24-backend/internal/database"
 	"www.github.com/ic-ETITE-24/icetite-24-backend/internal/routes"
 )
@@ -15,13 +15,24 @@ import (
 func main() {
 	app := fiber.New()
 
+	redisConfig, err := config.LoadRedisConfig()
+
+	if err != nil {
+		log.Fatalln("Failed to load redis environment variable! \n", err.Error())
+	}
+
 	config, err := config.LoadConfig(".")
+
 	if err != nil {
 		log.Fatalln("Failed to load environment variables! \n", err.Error())
 	}
 
 	database.ConnectDB(&config)
 	database.RunMigrations(database.DB)
+	err = database.NewRepository(redisConfig)
+	if err != nil {
+		log.Fatalln("Failed to load redis client! \n", err.Error())
+	}
 
 	app.Use(logger.New())
 
