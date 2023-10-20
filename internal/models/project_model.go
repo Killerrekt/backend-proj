@@ -11,18 +11,18 @@ type Project struct {
 	VideoLink    string `json:"video"`
 	DriveLink    string `json:"drive"`
 	ProjectTrack string `json:"project_track"`
-	IsFinal      string `json:"isfinal"`
+	IsFinal      bool   `json:"isfinal"`
 }
 
 type CreateProject struct {
-	Name         string `json:"name"`
-	Desc         string `json:"desc"`
-	Githublink   string `json:"github"`
+	Name         string `json:"name" validate:"required"`
+	Desc         string `json:"desc" validate:"required"`
+	Githublink   string `json:"github" validate:"required"`
 	FigmaLink    string `json:"figma"`
-	VideoLink    string `json:"video"`
+	VideoLink    string `json:"video" validate:"required"`
 	DriveLink    string `json:"drive"`
-	ProjectTrack string `json:"project_track"`
-	TeamID       uint   `json:"teamID"`
+	ProjectTrack string `json:"project_track" validate:"required"`
+	UserID       uint   `json:"ID" validate:"required"`
 }
 
 type GetProject struct {

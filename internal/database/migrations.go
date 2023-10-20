@@ -12,7 +12,7 @@ import (
 func RunMigrations(db *gorm.DB) {
 	log.Println("Running Migrations")
 
-	err := db.AutoMigrate(&models.User{}, &models.Project{})
+	err := db.AutoMigrate(&models.User{}, &models.Project{}, &models.Team{})
 	if err != nil {
 		fmt.Println("Could not migrate")
 		return
