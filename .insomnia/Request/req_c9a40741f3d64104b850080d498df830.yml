@@ -1,0 +1,32 @@
+_id: req_c9a40741f3d64104b850080d498df830
+type: Request
+parentId: wrk_f54524901c7d447c988f4fa1f7698f12
+modified: 1697829837047
+created: 1697826317116
+url: http://localhost:8000/users/resetpassword
+name: Reset Password Verify
+description: ""
+method: PUT
+body:
+  mimeType: application/json
+  text: |-
+    {
+    	"email": "vedant.matanhelia@gmail.com",
+    	"otp":  998541,
+    	"new_password": "vedant12"
+    }
+parameters: []
+headers:
+  - name: Content-Type
+    value: application/json
+  - name: User-Agent
+    value: insomnia/2023.5.8
+authentication: {}
+metaSortKey: -1697826113970.5
+isPrivate: false
+settingStoreCookies: true
+settingSendCookies: true
+settingDisableRenderRequestBody: false
+settingEncodeUrl: true
+settingRebuildPath: true
+settingFollowRedirects: global

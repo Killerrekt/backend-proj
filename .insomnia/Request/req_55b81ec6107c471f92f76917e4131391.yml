@@ -1,0 +1,30 @@
+_id: req_55b81ec6107c471f92f76917e4131391
+type: Request
+parentId: wrk_f54524901c7d447c988f4fa1f7698f12
+modified: 1697858591005
+created: 1697833027630
+url: http://localhost:8000/users/refresh
+name: Refresh
+description: ""
+method: POST
+body:
+  mimeType: application/json
+  text: >-
+    {
+    	"refresh_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE2OTc5NDQ5Nzl9.LlhW3LgCMTSTnoJm6ZOkzlK6xGapObu9qcTQ8e3UjAM"
+    }
+parameters: []
+headers:
+  - name: Content-Type
+    value: application/json
+  - name: User-Agent
+    value: insomnia/2023.5.8
+authentication: {}
+metaSortKey: -1697833027630
+isPrivate: false
+settingStoreCookies: true
+settingSendCookies: true
+settingDisableRenderRequestBody: false
+settingEncodeUrl: true
+settingRebuildPath: true
+settingFollowRedirects: global

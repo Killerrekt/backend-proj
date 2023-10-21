@@ -1,0 +1,31 @@
+_id: req_899bc45aa3e54ff0927561f1bab22d0f
+type: Request
+parentId: wrk_f54524901c7d447c988f4fa1f7698f12
+modified: 1697836774486
+created: 1697825789741
+url: http://localhost:8000/users/login
+name: Login
+description: ""
+method: POST
+body:
+  mimeType: application/json
+  text: |-
+    {
+    	"email": "vedant.matanhelia@gmail.com",
+    	"password": "vedant12"
+    }
+parameters: []
+headers:
+  - name: Content-Type
+    value: application/json
+  - name: User-Agent
+    value: insomnia/2023.5.8
+authentication: {}
+metaSortKey: -1697825789741
+isPrivate: false
+settingStoreCookies: true
+settingSendCookies: true
+settingDisableRenderRequestBody: false
+settingEncodeUrl: true
+settingRebuildPath: true
+settingFollowRedirects: global

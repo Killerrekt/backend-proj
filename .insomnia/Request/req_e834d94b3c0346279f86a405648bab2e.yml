@@ -1,0 +1,30 @@
+_id: req_e834d94b3c0346279f86a405648bab2e
+type: Request
+parentId: wrk_f54524901c7d447c988f4fa1f7698f12
+modified: 1697858534285
+created: 1697835995618
+url: http://localhost:8000/users/logout
+name: Logout
+description: ""
+method: GET
+body:
+  mimeType: application/json
+  text: >-
+    {
+    	"refresh_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE2OTc5NDQ3MjV9.LecRyUqJi05nqpJqzCEEsnTJcHudGaw2gmKKDSA-i44"
+    }
+parameters: []
+headers:
+  - name: Content-Type
+    value: application/json
+  - name: User-Agent
+    value: insomnia/2023.5.8
+authentication: {}
+metaSortKey: -1697835995618
+isPrivate: false
+settingStoreCookies: true
+settingSendCookies: true
+settingDisableRenderRequestBody: false
+settingEncodeUrl: true
+settingRebuildPath: true
+settingFollowRedirects: global
