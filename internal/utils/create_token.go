@@ -14,20 +14,23 @@ const (
 type TokenType int
 
 type TokenPayload struct {
-	Email   string
-	Role    string
-	Version int
+	Email string
+	Role  string
 }
 
-func CreateToken(exp time.Duration, payload TokenPayload, tokenType TokenType, secretKey string) (tokenString string, err error) {
+func CreateToken(
+	exp time.Duration,
+	payload TokenPayload,
+	tokenType TokenType,
+	secretKey string,
+) (tokenString string, err error) {
 	claims := jwt.MapClaims{
 		"exp": time.Now().Add(exp).Unix(),
-		"sub": payload.Email,
 	}
 
 	if tokenType == ACCESS_TOKEN {
+		claims["sub"] = payload.Email
 		claims["role"] = payload.Role
-		claims["version"] = payload.Version
 	}
 
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)

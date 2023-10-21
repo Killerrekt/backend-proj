@@ -2,11 +2,13 @@ package middleware
 
 import (
 	"fmt"
+	"log"
 	"strings"
 	"time"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/golang-jwt/jwt/v5"
+	"github.com/redis/go-redis/v9"
 	"github.com/spf13/viper"
 
 	"www.github.com/ic-ETITE-24/icetite-24-backend/internal/database"
@@ -30,7 +32,7 @@ func VerifyAccessToken(c *fiber.Ctx) error {
 
 	accessToken, _ := jwt.Parse(token, func(token *jwt.Token) (interface{}, error) {
 		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
-			return nil, fmt.Errorf("Invalid signing method")
+			return nil, fmt.Errorf("invalid signing method")
 		}
 		return []byte(viper.GetString("ACCESS_SECRET_KEY")), nil
 	})
@@ -45,10 +47,6 @@ func VerifyAccessToken(c *fiber.Ctx) error {
 
 		if user.ID == 0 {
 			return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"message": "Invalid User"})
-		}
-
-		if float64(user.TokenVersion) != claims["version"].(float64) {
-			return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"message": "Invalid Token"})
 		}
 
 		c.Locals("user", user)
@@ -75,7 +73,7 @@ func VerifyAdminToken(c *fiber.Ctx) error {
 
 	accessToken, _ := jwt.Parse(token, func(token *jwt.Token) (interface{}, error) {
 		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
-			return nil, fmt.Errorf("Invalid signing method")
+			return nil, fmt.Errorf("invalid signing method")
 		}
 		return []byte(viper.GetString("ACCESS_SECRET_KEY")), nil
 	})
@@ -96,10 +94,6 @@ func VerifyAdminToken(c *fiber.Ctx) error {
 			return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"message": "Invalid User"})
 		}
 
-		if user.TokenVersion != claims["version"].(int) {
-			return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"message": "Invalid Token"})
-		}
-
 		c.Locals("user", user)
 		return c.Next()
 	}
@@ -117,11 +111,28 @@ func VerifyRefreshToken(c *fiber.Ctx) error {
 			JSON(fiber.Map{"message": "Please pass in the refresh_token"})
 	}
 
+	if tokenReq.RefreshToken == "" {
+		return c.Status(fiber.StatusNotAcceptable).
+			JSON(fiber.Map{"message": "Please pass in the refresh token"})
+	}
+
 	token := tokenReq.RefreshToken
+
+	email, err := database.RedisClient.Get(tokenReq.RefreshToken)
+
+	if err == redis.Nil {
+		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"message": "User not logged in"})
+	}
+
+	if err != nil {
+		log.Println(err.Error())
+		return c.Status(fiber.StatusInternalServerError).
+			JSON(fiber.Map{"message": "internal server error"})
+	}
 
 	accessToken, _ := jwt.Parse(token, func(token *jwt.Token) (interface{}, error) {
 		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
-			return nil, fmt.Errorf("Invalid signing method")
+			return nil, fmt.Errorf("invalid signing method")
 		}
 		return []byte(viper.GetString("REFRESH_SECRET_KEY")), nil
 	})
@@ -132,18 +143,13 @@ func VerifyRefreshToken(c *fiber.Ctx) error {
 		}
 
 		var user models.User
-		database.DB.Find(&user, "email = ?", claims["sub"])
+		database.DB.Find(&user, "email = ?", email)
 
 		if user.ID == 0 {
 			return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"message": "Invalid User"})
 		}
 
-		if user.TokenVersion == 0 {
-			return c.Status(fiber.StatusUnauthorized).
-				JSON(fiber.Map{"message": "User not logged in"})
-		}
-
-		c.Locals("user", user)
+    c.Locals("user", user)
 		return c.Next()
 	}
 

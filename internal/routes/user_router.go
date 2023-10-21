@@ -11,11 +11,13 @@ func UserRoutes(incomingRoutes *fiber.App) {
 	incomingRoutes.Post("/users/refresh", middleware.VerifyRefreshToken, controller.Refresh)
 	incomingRoutes.Post("/users/signup", controller.CreateUser)
 	incomingRoutes.Post("/users/login", controller.Login)
-	incomingRoutes.Get("/users/logout", middleware.VerifyAccessToken, controller.Logout)
-	incomingRoutes.Get("/users/forgotpassword/:email", controller.ForgotPassword)
-	incomingRoutes.Post("/users/resetpassword/:Token", controller.ResetPassword)
-	incomingRoutes.Get("/users/sendOTP/:email", controller.SendVerifyUserOTP)
-	incomingRoutes.Get("/users/verifyOTP", controller.VerifyUserOTP)
+	incomingRoutes.Get("/users/logout", controller.Logout)
+	incomingRoutes.Post("/users/resetpassword/", controller.SendResetPasswordOTP)
+	incomingRoutes.Put("/users/resetpassword/", controller.VerifyResetPasswordOTP)
+	incomingRoutes.Post("/users/verifyuser/", controller.SendVerifyUserOTP)
+	incomingRoutes.Put("/users/verifyuser", controller.VerifyUserOTP)
+  incomingRoutes.Get("/users/getall", middleware.VerifyAdminToken, controller.GetAllUsers)
+
 	incomingRoutes.Get("/payment/initiate", middleware.VerifyAccessToken, controller.InitiatePayment)
 	incomingRoutes.Post("/payment/callbackurl", controller.CallBackURL)
 }
