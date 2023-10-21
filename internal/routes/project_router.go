@@ -8,5 +8,6 @@ import (
 )
 
 func ProjectsRoutes(incomingRoutes *fiber.App) {
+	incomingRoutes.Post("/team", middleware.VerifyAccessToken, controllers.CreateTeam)
 	incomingRoutes.Post("/project/create", middleware.VerifyAccessToken, controllers.CreateProject)
 }

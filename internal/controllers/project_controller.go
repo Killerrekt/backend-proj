@@ -83,3 +83,30 @@ func GetProject(c *fiber.Ctx) error {
 
 	return nil
 }
+
+func CreateTeam(c *fiber.Ctx) error {
+	user := c.Locals("user").(models.User)
+	var Req struct {
+		TeamID int `json:"team_id"`
+	}
+
+	err := c.BodyParser(&Req)
+
+	user.TeamId = Req.TeamID
+	database.DB.Save(&user)
+
+	entry := models.Team{
+		TeamID: uint(Req.TeamID),
+	}
+
+	database.DB.Create(&entry)
+
+	if err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(&fiber.Map{
+			"Error": "Unable to parse the body",
+		})
+	}
+	return c.Status(fiber.StatusAccepted).JSON(&fiber.Map{
+		"Message": "Team field shld be created",
+	})
+}
