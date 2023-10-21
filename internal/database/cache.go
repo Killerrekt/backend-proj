@@ -18,7 +18,7 @@ var RedisClient *RedisRepository
 func NewRepository(redisConfig config.RedisConfig) error {
 
 	client := redis.NewClient(&redis.Options{
-		Addr: redisConfig.REDIS_HOST,
+		Addr: fmt.Sprintf("%s:%s", redisConfig.REDIS_HOST, redisConfig.REDIS_PORT),
 		DB:   0,
 	})
 
@@ -41,9 +41,6 @@ func (r *RedisRepository) Set(key, value string, time time.Duration) error {
 func (r *RedisRepository) Get(key string) (string, error) {
 	ctx := context.Background()
 	val, err := r.client.Get(ctx, key).Result()
-	if err == redis.Nil {
-		return "", nil
-	}
 	return val, err
 }
 
