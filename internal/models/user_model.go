@@ -20,24 +20,24 @@ type User struct {
 	TeamId       int       `json:"team_id"`
 	IsLeader     bool      `json:"is_leader"`
 	IsApproved   bool      `json:"is_approved"`
+	IsVerified   bool      `json:"is_verified"   gorm:"default:false"`
 	PhoneNumber  string    `json:"phone_number"`
 	College      string    `json:"college"`
 	Github       string    `json:"github"`
 	TokenVersion int       `json:"token_version" gorm:"default:0"`
-	OTP          int       `json:"otp"           gorm:"default:0"`
 	Invoice      []Invoice `                     gorm:"foreignKey:UserId;References:ID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE"`
 }
 
 type CreateUser struct {
-	FirstName   string `json:"first_name"`
-	LastName    string `json:"last_name"`
-	Email       string `json:"email"`
-	Password    string `json:"password"`
-	Gender      string `json:"gender"`
-	DateOfBirth string `json:"date_of_birth"` // considering "YYYY/MM/DD format"
-	Bio         string `json:"bio"`
-	PhoneNumber string `json:"phone_number"`
-	College     string `json:"college"`
-	Github      string `json:"github"`
-	Country     string `json:"country"`
+	FirstName   string `json:"first_name"    validate:"required"`
+	LastName    string `json:"last_name"     validate:"required"`
+	Email       string `json:"email"         validate:"required"`
+	Password    string `json:"password"      validate:"required"`
+	Gender      string `json:"gender"        validate:"required"`
+	DateOfBirth string `json:"date_of_birth" validate:"required"` // considering "YYYY/MM/DD format"
+	Bio         string `json:"bio"           validate:"required"`
+	PhoneNumber string `json:"phone_number"  validate:"required"`
+	College     string `json:"college"       validate:"required"`
+	Github      string `json:"github"        validate:"required"`
+	Country     string `json:"country"       validate:"required"`
 }
