@@ -55,6 +55,7 @@ func main() {
 	})
 
 	routes.UserRoutes(app)
+	routes.ProjectsRoutes(app)
 
 	app.Use(func(c *fiber.Ctx) error {
 		return c.Status(404).JSON(fiber.Map{
