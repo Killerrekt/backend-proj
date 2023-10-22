@@ -42,10 +42,6 @@ func LoadConfig(path string) (config Config, err error) {
 func LoadRedisConfig() (redisConfig RedisConfig, err error) {
 	viper.SetConfigFile(".env")
 	viper.AutomaticEnv()
-	err = viper.ReadInConfig()
-	if err != nil {
-		return
-	}
 	redisConfig = RedisConfig{
 		REDIS_HOST: viper.GetString("REDIS_HOST"),
 		REDIS_PORT: viper.GetString("REDIS_PORT"),

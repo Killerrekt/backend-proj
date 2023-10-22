@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"log"
 
 	"github.com/gofiber/fiber/v2"
@@ -30,7 +29,6 @@ func main() {
 
 	database.ConnectDB(&config)
 	database.RunMigrations(database.DB)
-	fmt.Println(redisConfig)
 	err = database.NewRepository(redisConfig)
 	if err != nil {
 		log.Fatalln("Failed to load redis client! \n", err.Error())
