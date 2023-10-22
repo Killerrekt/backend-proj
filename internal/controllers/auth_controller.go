@@ -5,8 +5,8 @@ import (
 	"time"
 
 	"github.com/go-playground/validator/v10"
-	"github.com/redis/go-redis/v9"
 	"github.com/gofiber/fiber/v2"
+	"github.com/redis/go-redis/v9"
 	"github.com/spf13/viper"
 	"golang.org/x/crypto/bcrypt"
 
@@ -134,11 +134,11 @@ func Logout(c *fiber.Ctx) error {
 			JSON(fiber.Map{"message": "Please pass in the refresh token"})
 	}
 
-  if _, err := database.RedisClient.Get(request.RefreshToken); err != nil {
-    if err == redis.Nil {
-      return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"message": "User not logged in"})
-    }
-  }
+	if _, err := database.RedisClient.Get(request.RefreshToken); err != nil {
+		if err == redis.Nil {
+			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"message": "User not logged in"})
+		}
+	}
 
 	if err := database.RedisClient.Delete(request.RefreshToken); err != nil {
 		log.Println(err.Error())

@@ -149,7 +149,7 @@ func VerifyRefreshToken(c *fiber.Ctx) error {
 			return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"message": "Invalid User"})
 		}
 
-    c.Locals("user", user)
+		c.Locals("user", user)
 		return c.Next()
 	}
 

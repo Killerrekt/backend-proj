@@ -8,6 +8,9 @@ import (
 )
 
 func ProjectsRoutes(incomingRoutes *fiber.App) {
-	incomingRoutes.Post("/team", middleware.VerifyAccessToken, controllers.CreateTeam)
+	incomingRoutes.Post("/project/testing", middleware.VerifyAccessToken, controllers.CreateTeam)
+	incomingRoutes.Post("/project/finalise", middleware.VerifyAccessToken, controllers.FinaliseProject)
 	incomingRoutes.Post("/project/create", middleware.VerifyAccessToken, controllers.CreateProject)
+	incomingRoutes.Get("/project/get", middleware.VerifyAccessToken, controllers.GetProject)
+	incomingRoutes.Delete("/project/delete", middleware.VerifyAccessToken, controllers.DeleteProject)
 }

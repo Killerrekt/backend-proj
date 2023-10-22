@@ -12,7 +12,7 @@ type Project struct {
 	DriveLink    string `json:"drive"`
 	ProjectTrack string `json:"project_track"`
 	IsFinal      bool   `json:"isfinal"`
-	TeamID       int    `json:"teamID"`
+	TeamID       uint   `json:"teamID"`
 }
 
 type CreateProject struct {
