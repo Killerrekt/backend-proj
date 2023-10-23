@@ -1,11 +1,8 @@
 package controllers
 
 import (
-	"errors"
-
 	"github.com/go-playground/validator/v10"
 	"github.com/gofiber/fiber/v2"
-	"gorm.io/gorm"
 	"www.github.com/ic-ETITE-24/icetite-24-backend/internal/database"
 	"www.github.com/ic-ETITE-24/icetite-24-backend/internal/models"
 )
@@ -42,7 +39,7 @@ func CreateProject(c *fiber.Ctx) error { // this will both create and update the
 	}
 
 	var project models.Project
-	database.DB.Find(&project, "team_id = ?", user.TeamId) // maybe changed in future to ID instead of TeamID
+	database.DB.Find(&project, "team_id = ?", user.TeamID) // maybe changed in future to ID instead of TeamID
 	if project.ID != 0 && project.IsFinal {
 		return c.Status(fiber.StatusForbidden).JSON(&fiber.Map{
 			"status": false,
@@ -51,25 +48,14 @@ func CreateProject(c *fiber.Ctx) error { // this will both create and update the
 	}
 	createproject.IsFinal = false
 
-	var errstring string
-
 	if project.ID == 0 {
-		err := database.DB.Create(&createproject)
-		errstring = DBerrorHandling(err)
+		database.DB.Create(&createproject)
 	} else {
-		err := database.DB.Model(&project).Updates(&createproject)
-		errstring = DBerrorHandling(err)
+		database.DB.Model(&project).Updates(&createproject)
 	}
-	if errstring != "" {
-		return c.Status(fiber.StatusBadRequest).JSON(&fiber.Map{
-			"error":  errstring,
-			"status": false,
-		})
-	}
-
 	return c.Status(fiber.StatusAccepted).JSON(&fiber.Map{
 		"status":  true,
-		"message": "project have been created",
+		"message": "Route works",
 		"data":    project,
 	})
 }
@@ -78,14 +64,7 @@ func GetProject(c *fiber.Ctx) error {
 	var getproject models.Project
 
 	user := c.Locals("user").(models.User)
-	err := database.DB.Find(&getproject, "team_id = ?", user.TeamId)
-	errstring := DBerrorHandling(err)
-	if errstring != "" {
-		return c.Status(fiber.StatusBadRequest).JSON(&fiber.Map{
-			"error":  errstring,
-			"status": false,
-		})
-	}
+	database.DB.Find(&getproject, "team_id = ?", user.TeamID)
 
 	if getproject.ID == 0 {
 		return c.Status(fiber.StatusBadRequest).JSON(&fiber.Map{
@@ -97,23 +76,6 @@ func GetProject(c *fiber.Ctx) error {
 	return c.Status(fiber.StatusAccepted).JSON(&fiber.Map{
 		"status": true,
 		"data":   getproject,
-	})
-}
-
-func GetAllProject(c *fiber.Ctx) error {
-	var data []models.Project
-	err := database.DB.Find(&data)
-	errstring := DBerrorHandling(err)
-	if errstring != "" {
-		return c.Status(fiber.StatusBadRequest).JSON(&fiber.Map{
-			"error":  errstring,
-			"status": false,
-		})
-	}
-
-	return c.Status(fiber.StatusAccepted).JSON(&fiber.Map{
-		"data":   data,
-		"status": true,
 	})
 }
 
@@ -154,7 +116,7 @@ func FinaliseProject(c *fiber.Ctx) error {
 		})
 	}
 	var project models.Project
-	database.DB.Find(&project, "team_id = ?", user.TeamId)
+	database.DB.Find(&project, "team_id = ?", user.TeamID)
 	if project.IsFinal {
 		return c.Status(fiber.StatusBadRequest).JSON(&fiber.Map{
 			"status": false,
@@ -169,7 +131,7 @@ func FinaliseProject(c *fiber.Ctx) error {
 	})
 }
 
-func CreateTeam(c *fiber.Ctx) error { // dummy function just to check functionality
+/*func CreateTeam(c *fiber.Ctx) error { // dummy function just to check functionality
 	user := c.Locals("user").(models.User)
 	var Req struct {
 		TeamID int `json:"team_id"`
@@ -198,15 +160,4 @@ func CreateTeam(c *fiber.Ctx) error { // dummy function just to check functional
 		"user":    user,
 		"data":    entry,
 	})
-}
-
-func DBerrorHandling(err *gorm.DB) string {
-	if err.Error != nil {
-		if errors.Is(err.Error, gorm.ErrDuplicatedKey) {
-			return "Duplicate field was tried to be entered"
-		} else {
-			return err.Error.Error()
-		}
-	}
-	return ""
-}
+}*/

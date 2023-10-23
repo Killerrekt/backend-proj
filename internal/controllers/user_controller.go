@@ -42,7 +42,7 @@ func CreateUser(c *fiber.Ctx) error {
 		Gender:      createUser.Gender,
 		DateOfBirth: dob,
 		Bio:         createUser.Bio,
-		TeamId:      0,
+		TeamID:      0,
 		IsLeader:    false,
 		IsApproved:  false,
 		PhoneNumber: createUser.PhoneNumber,

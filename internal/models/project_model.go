@@ -4,7 +4,7 @@ import "gorm.io/gorm"
 
 type Project struct {
 	gorm.Model
-	Name         string `json:"name" gorm:"unique"`
+	Name         string `json:"name"`
 	Desc         string `json:"desc"`
 	Githublink   string `json:"github"`
 	FigmaLink    string `json:"figma"`

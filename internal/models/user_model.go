@@ -17,7 +17,7 @@ type User struct {
 	Country      string    `json:"country"`
 	DateOfBirth  time.Time `json:"date_of_birth"`
 	Bio          string    `json:"bio"`
-	TeamId       int       `json:"team_id"`
+	TeamID       uint      `json:"team_id"`
 	IsLeader     bool      `json:"is_leader"`
 	IsApproved   bool      `json:"is_approved"`
 	IsVerified   bool      `json:"is_verified"   gorm:"default:false"`
