@@ -2,7 +2,6 @@ package controllers
 
 import (
 	"errors"
-	"fmt"
 
 	"github.com/go-playground/validator/v10"
 	"github.com/gofiber/fiber/v2"
@@ -206,8 +205,7 @@ func DBerrorHandling(err *gorm.DB) string {
 		if errors.Is(err.Error, gorm.ErrDuplicatedKey) {
 			return "Duplicate field was tried to be entered"
 		} else {
-			fmt.Println(err)
-			return "something when wrong while interacting with database"
+			return err.Error.Error()
 		}
 	}
 	return ""
