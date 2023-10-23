@@ -20,12 +20,12 @@ func VerifyAccessToken(c *fiber.Ctx) error {
 
 	if tokenString == "" {
 		return c.Status(fiber.StatusUnauthorized).
-			JSON(fiber.Map{"message": "Missing Authorization Header"})
+			JSON(fiber.Map{"status": false, "message": "Missing Authorization Header"})
 	}
 
 	if !strings.HasPrefix(tokenString, "Bearer ") {
 		return c.Status(fiber.StatusUnauthorized).
-			JSON(fiber.Map{"message": "Invalid Authorization Header Format"})
+			JSON(fiber.Map{"status": false, "message": "Invalid Authorization Header Format"})
 	}
 
 	token := strings.TrimPrefix(tokenString, "Bearer ")
@@ -39,21 +39,31 @@ func VerifyAccessToken(c *fiber.Ctx) error {
 
 	if claims, ok := accessToken.Claims.(jwt.MapClaims); ok && accessToken.Valid {
 		if float64(time.Now().Unix()) > claims["exp"].(float64) {
-			return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"message": "Token Expired"})
+			return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
+				"status": false, "message": "Token Expired",
+			})
 		}
 
 		var user models.User
 		database.DB.Find(&user, "email = ?", claims["sub"])
 
 		if user.ID == 0 {
-			return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"message": "Invalid User"})
+			return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
+				"status": false, "message": "Invalid User",
+			})
+		}
+
+		if user.IsRoasted {
+			return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
+				"status": false, "message": "User is banned", "roasted": true,
+			})
 		}
 
 		c.Locals("user", user)
 		return c.Next()
 	}
 
-	return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"message": "Invalid Token"})
+	return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"status": false, "message": "Invalid Token"})
 }
 
 func VerifyAdminToken(c *fiber.Ctx) error {
@@ -61,12 +71,12 @@ func VerifyAdminToken(c *fiber.Ctx) error {
 
 	if tokenString == "" {
 		return c.Status(fiber.StatusUnauthorized).
-			JSON(fiber.Map{"message": "Missing Authorization Header"})
+			JSON(fiber.Map{"status": false, "message": "Missing Authorization Header"})
 	}
 
 	if !strings.HasPrefix(tokenString, "Bearer ") {
 		return c.Status(fiber.StatusUnauthorized).
-			JSON(fiber.Map{"message": "Invalid Authorization Header Format"})
+			JSON(fiber.Map{"status": false, "message": "Invalid Authorization Header Format"})
 	}
 
 	token := strings.TrimPrefix(tokenString, "Bearer ")
@@ -80,25 +90,37 @@ func VerifyAdminToken(c *fiber.Ctx) error {
 
 	if claims, ok := accessToken.Claims.(jwt.MapClaims); ok && accessToken.Valid {
 		if float64(time.Now().Unix()) > claims["exp"].(float64) {
-			return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"message": "Token Expired"})
+			return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
+				"status": false, "message": "Token Expired",
+			})
 		}
 
 		if claims["role"] != "admin" {
-			return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"message": "Invalid Role"})
+			return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
+				"status": false, "message": "Invalid Role",
+			})
 		}
 
 		var user models.User
 		database.DB.Find(&user, "email = ?", claims["sub"])
 
 		if user.ID == 0 {
-			return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"message": "Invalid User"})
+			return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
+				"status": false, "message": "Invalid User",
+			})
+		}
+
+		if user.IsRoasted {
+			return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
+				"status": false, "message": "User is banned", "roasted": true,
+			})
 		}
 
 		c.Locals("user", user)
 		return c.Next()
 	}
 
-	return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"message": "Invalid Token"})
+	return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"status": false, "message": "Invalid Token"})
 }
 
 func VerifyRefreshToken(c *fiber.Ctx) error {
@@ -108,12 +130,12 @@ func VerifyRefreshToken(c *fiber.Ctx) error {
 
 	if err := c.BodyParser(&tokenReq); err != nil {
 		return c.Status(fiber.StatusBadRequest).
-			JSON(fiber.Map{"message": "Please pass in the refresh_token"})
+			JSON(fiber.Map{"status": false, "message": "Please pass in the refresh_token"})
 	}
 
 	if tokenReq.RefreshToken == "" {
 		return c.Status(fiber.StatusNotAcceptable).
-			JSON(fiber.Map{"message": "Please pass in the refresh token"})
+			JSON(fiber.Map{"status": false, "message": "Please pass in the refresh token"})
 	}
 
 	token := tokenReq.RefreshToken
@@ -121,13 +143,16 @@ func VerifyRefreshToken(c *fiber.Ctx) error {
 	email, err := database.RedisClient.Get(tokenReq.RefreshToken)
 
 	if err == redis.Nil {
-		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"message": "User not logged in"})
+		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
+			"status":  false,
+			"message": "User not logged in",
+		})
 	}
 
 	if err != nil {
 		log.Println(err.Error())
 		return c.Status(fiber.StatusInternalServerError).
-			JSON(fiber.Map{"message": "internal server error"})
+			JSON(fiber.Map{"status": false, "message": "internal server error"})
 	}
 
 	accessToken, _ := jwt.Parse(token, func(token *jwt.Token) (interface{}, error) {
@@ -139,19 +164,23 @@ func VerifyRefreshToken(c *fiber.Ctx) error {
 
 	if claims, ok := accessToken.Claims.(jwt.MapClaims); ok && accessToken.Valid {
 		if float64(time.Now().Unix()) > claims["exp"].(float64) {
-			return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"message": "Token Expired"})
+			return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
+				"status": false, "message": "Token Expired",
+			})
 		}
 
 		var user models.User
 		database.DB.Find(&user, "email = ?", email)
 
 		if user.ID == 0 {
-			return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"message": "Invalid User"})
+			return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
+				"status": false, "message": "Invalid User",
+			})
 		}
 
 		c.Locals("user", user)
 		return c.Next()
 	}
 
-	return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"message": "Invalid Token"})
+	return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"status": false, "message": "Invalid Token"})
 }

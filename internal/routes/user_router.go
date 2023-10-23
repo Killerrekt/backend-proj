@@ -8,16 +8,16 @@ import (
 )
 
 func UserRoutes(incomingRoutes *fiber.App) {
-	incomingRoutes.Post("/users/refresh", middleware.VerifyRefreshToken, controller.Refresh)
-	incomingRoutes.Post("/users/signup", controller.CreateUser)
-	incomingRoutes.Post("/users/login", controller.Login)
-	incomingRoutes.Get("/users/logout", controller.Logout)
-	incomingRoutes.Post("/users/resetpassword/", controller.SendResetPasswordOTP)
-	incomingRoutes.Put("/users/resetpassword/", controller.VerifyResetPasswordOTP)
-	incomingRoutes.Post("/users/verifyuser/", controller.SendVerifyUserOTP)
-	incomingRoutes.Put("/users/verifyuser", controller.VerifyUserOTP)
-  incomingRoutes.Get("/users/getall", middleware.VerifyAdminToken, controller.GetAllUsers)
-
-	incomingRoutes.Get("/payment/initiate", middleware.VerifyAccessToken, controller.InitiatePayment)
-	incomingRoutes.Post("/payment/callbackurl", controller.CallBackURL)
+	userRoutes := incomingRoutes.Group("/users")
+	userRoutes.Post("/refresh", middleware.VerifyRefreshToken, controller.Refresh)
+	userRoutes.Post("/signup", controller.CreateUser)
+	userRoutes.Post("/login", controller.Login)
+	userRoutes.Get("/logout", controller.Logout)
+	userRoutes.Post("/resetpassword/", controller.SendResetPasswordOTP)
+	userRoutes.Put("/resetpassword/", controller.VerifyResetPasswordOTP)
+	userRoutes.Post("/verifyuser/", controller.SendVerifyUserOTP)
+	userRoutes.Put("/verifyuser", controller.VerifyUserOTP)
+	userRoutes.Get("/getall", middleware.VerifyAdminToken, controller.GetAllUsers)
+	userRoutes.Post("/roast", middleware.VerifyAdminToken, controller.RoastUser)
+	userRoutes.Post("/revoke_roast", middleware.VerifyAdminToken, controller.RevokeRoast)
 }
