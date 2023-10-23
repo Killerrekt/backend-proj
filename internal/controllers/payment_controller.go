@@ -4,9 +4,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"math/rand"
-	"net/http"
-	"time"
 
+	"github.com/go-playground/validator/v10"
 	"github.com/gofiber/fiber/v2"
 
 	"github.com/parnurzeal/gorequest"
@@ -15,32 +14,41 @@ import (
 )
 
 func generateUniqueRegistrationNo() int64 {
-	rand.Seed(time.Now().UnixNano())
 	return int64(rand.Intn(9000000) + 1000000)
 }
 
 func CallBackURL(c *fiber.Ctx) error {
 	var request struct {
-		RegistrationNo  int64   `json:"registration_no"`
-		Token           string  `json:"token"`
-		IToken          string  `json:"itoken"`
-		TransactionId   int     `json:"transaction_id"`
-		PaymentStatus   bool    `json:"status"`
-		Amount          float32 `json:"amount"`
-		InvoiceNumber   int64   `json:"invoice_no"`
-		TransactionDate string  `json:"transaction_date"`
-		CurrencyCode    string  `json:"currency_code"`
-		UserId          int     `json:"user_id"`
+		RegistrationNo  int64   `json:"registration_no" validate:"required"`
+		Token           string  `json:"token" validate:"required"`
+		IToken          string  `json:"itoken" validate:"required"`
+		TransactionId   int     `json:"transaction_id" validate:"required"`
+		PaymentStatus   bool    `json:"status" validate:"required"`
+		Amount          float32 `json:"amount" validate:"required"`
+		InvoiceNumber   int64   `json:"invoice_no" validate:"required"`
+		TransactionDate string  `json:"transaction_date" validate:"required"`
+		CurrencyCode    string  `json:"currency_code" validate:"required"`
+		UserId          int     `json:"user_id" validate:"required"`
 	}
 
 	if err := c.BodyParser(&request); err != nil {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"message": "Invalid request body"})
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"status": false, "message": "Could not process JSON",
+		})
+	}
+
+	validator := validator.New()
+
+	if err := validator.Struct(request); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"status": false, "message": "Please pass in all the fields",
+		})
 	}
 
 	var invoice models.Invoice
 	result := database.DB.Where("registration_no = ? AND user_id = ?", request.RegistrationNo, int(request.UserId)).First(&invoice)
 	if result.Error != nil {
-		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"message": "Invoice not found"})
+		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"status": false, "message": "Invoice not found"})
 	}
 
 	updates := models.Invoice{
@@ -56,10 +64,15 @@ func CallBackURL(c *fiber.Ctx) error {
 	}
 
 	if err := database.DB.Model(&invoice).Updates(updates).Error; err != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"message": "Failed to update invoice"})
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"status": false, "message": "Failed to update invoice",
+		})
 	}
 
-	return c.Status(fiber.StatusOK).JSON(fiber.Map{"message": "Invoice updated successfully"})
+	return c.Status(fiber.StatusOK).JSON(fiber.Map{
+		"status":  true,
+		"message": "Invoice updated successfully",
+	})
 }
 
 func InitiatePayment(c *fiber.Ctx) error {
@@ -90,7 +103,9 @@ func InitiatePayment(c *fiber.Ctx) error {
 	}
 
 	if err := database.DB.Create(&invoice).Error; err != nil {
-		return c.Status(http.StatusInternalServerError).JSON(fiber.Map{"message": "Failed to save"})
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"status": false, "message": "Failed to save",
+		})
 	}
 
 	payload := fiber.Map{
@@ -108,14 +123,18 @@ func InitiatePayment(c *fiber.Ctx) error {
 	resp, body, errs := request.End()
 
 	if len(errs) > 0 {
-		return c.Status(http.StatusInternalServerError).JSON(fiber.Map{"message": "Failed to make the request"})
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"status": false, "message": "Failed to make the request",
+		})
 	}
 
-	if resp.StatusCode == http.StatusOK {
+	if resp.StatusCode == fiber.StatusOK {
 		var responseMap map[string]interface{}
 		if err := json.Unmarshal([]byte(body), &responseMap); err != nil {
 			fmt.Println("Error parsing response:", err)
-			return c.Status(http.StatusInternalServerError).JSON(fiber.Map{"message": "Failed to parse response"})
+			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+				"status": false, "message": "Failed to parse response",
+			})
 		}
 
 		getURL := fmt.Sprintf("https://events.vit.ac.in/events/GRV23/startPay/%d", RegistrationNo)
@@ -123,11 +142,16 @@ func InitiatePayment(c *fiber.Ctx) error {
 		getResponse, _, getErrs := gorequest.New().Get(getURL).End()
 
 		if len(getErrs) > 0 {
-			return c.Status(http.StatusInternalServerError).JSON(fiber.Map{"message": "Failed to make GET request"})
+			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+				"status": false, "message": "Failed to make GET request",
+			})
 		}
 
-		return c.SendString(fmt.Sprintf("Response from GET request: %s", getResponse))
+		return c.SendString(fmt.Sprintf("Response from GET request: %v", getResponse))
 	}
 
-	return c.Status(http.StatusInternalServerError).JSON(fiber.Map{"message": "POST request failed"})
+	return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+		"status":  true,
+		"message": "POST request failed",
+	})
 }

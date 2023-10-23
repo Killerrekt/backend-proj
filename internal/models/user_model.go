@@ -21,6 +21,7 @@ type User struct {
 	IsLeader     bool      `json:"is_leader"`
 	IsApproved   bool      `json:"is_approved"`
 	IsVerified   bool      `json:"is_verified"   gorm:"default:false"`
+	IsRoasted    bool      `json:"is_roasted"    gorm:"default:false"`
 	PhoneNumber  string    `json:"phone_number"`
 	College      string    `json:"college"`
 	Github       string    `json:"github"`

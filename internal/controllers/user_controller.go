@@ -20,14 +20,14 @@ func CreateUser(c *fiber.Ctx) error {
 
 	if err := c.BodyParser(&createUser); err != nil {
 		return c.Status(fiber.StatusBadRequest).
-			JSON(fiber.Map{"message": "Error parsing JSON"})
+			JSON(fiber.Map{"status": false, "message": "Error parsing JSON"})
 	}
 
 	validator := validator.New()
 
 	if err := validator.Struct(createUser); err != nil {
 		return c.Status(fiber.StatusNotAcceptable).
-			JSON(fiber.Map{"message": "Please pass in all the required fields"})
+			JSON(fiber.Map{"status": false, "message": "Please pass in all the required fields"})
 	}
 
 	dob, _ := time.Parse("2006-01-02", createUser.DateOfBirth)
@@ -53,19 +53,25 @@ func CreateUser(c *fiber.Ctx) error {
 
 	if result := database.DB.Create(&user); result.Error != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-			"message": result.Error.Error(),
+			"status": false, "message": result.Error.Error(),
 		})
 	}
 
 	return c.Status(fiber.StatusOK).
-		JSON(fiber.Map{"message": "Successfully created user", "user": user})
+		JSON(fiber.Map{
+			"status": true, "message": "Successfully created user",
+			"verification_status": true, "roasted": false,
+		})
 }
 
 func GetAllUsers(c *fiber.Ctx) error {
 	var users []models.User
 	database.DB.Find(&users)
 
-	return c.Status(fiber.StatusOK).JSON(fiber.Map{"message": "Return Successful", "users": users})
+	return c.Status(fiber.StatusOK).JSON(fiber.Map{
+		"status":  true,
+		"message": "Return Successful", "users": users,
+	})
 }
 
 // func ForgotPassword(c *fiber.Ctx) error {
@@ -187,12 +193,14 @@ func SendResetPasswordOTP(c *fiber.Ctx) error {
 	}
 
 	if err := c.BodyParser(&request); err != nil {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"message": "Error parsing JSON"})
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"status": false, "message": "Error parsing JSON",
+		})
 	}
 
 	if request.Email == "" {
 		return c.Status(fiber.StatusNotAcceptable).
-			JSON(fiber.Map{"message": "Please pass in valid data"})
+			JSON(fiber.Map{"status": false, "message": "Please pass in valid data"})
 	}
 
 	otp := rand.Intn(900000) + 100000
@@ -201,22 +209,23 @@ func SendResetPasswordOTP(c *fiber.Ctx) error {
 	database.DB.Find(&user, "email = ?", request.Email)
 
 	if user.ID == 0 {
-		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"message": "The user does not exist"})
+		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"status": false, "message": "The user does not exist"})
 	}
 
-	if err := database.RedisClient.Set(fmt.Sprintf("reset_password:%s", request.Email), fmt.Sprint(otp), time.Minute*10); err != nil {
+	if err := database.RedisClient.Set(fmt.Sprintf("reset_password:%s", request.Email),
+		fmt.Sprint(otp), time.Minute*10); err != nil {
 		return c.Status(fiber.StatusInternalServerError).
-			JSON(fiber.Map{"message": "Could not set otp", "error": err.Error()})
+			JSON(fiber.Map{"status": false, "message": "Could not set otp"})
 	}
 
 	body := fmt.Sprintf("Your otp for reset password is: %d", otp)
 
 	if err := utils.SendMail("Reset Password", body, request.Email); err != nil {
 		return c.Status(fiber.StatusInternalServerError).
-			JSON(fiber.Map{"message": "Error sending email", "error": err.Error()})
+			JSON(fiber.Map{"status": false, "message": "Error sending email"})
 	}
 
-	return c.Status(fiber.StatusOK).JSON(fiber.Map{"message": "Email Sent"})
+	return c.Status(fiber.StatusOK).JSON(fiber.Map{"status": true, "message": "Email Sent"})
 }
 
 func VerifyResetPasswordOTP(c *fiber.Ctx) error {
@@ -227,45 +236,51 @@ func VerifyResetPasswordOTP(c *fiber.Ctx) error {
 	}
 
 	if err := c.BodyParser(&request); err != nil {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"message": "Error parsing JSON"})
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"status":  false,
+			"message": "Error parsing JSON",
+		})
 	}
 
 	validator := validator.New()
 
 	if err := validator.Struct(request); err != nil {
 		return c.Status(fiber.StatusNotAcceptable).
-			JSON(fiber.Map{"message": "Please pass in an email, otp and a new password"})
+			JSON(fiber.Map{"status": false, "message": "Please pass in an email, otp and a new password"})
 	}
 
 	var user models.User
 	database.DB.Find(&user, "email = ?", request.Email)
 
 	if user.ID == 0 {
-		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"message": "User Not Found"})
+		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"status": false, "message": "User Not Found"})
 	}
 
 	otpStr, err := database.RedisClient.Get(fmt.Sprintf("reset_password:%s", request.Email))
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).
-			JSON(fiber.Map{"message": "Could not read otp from redis", "error": err.Error()})
+			JSON(fiber.Map{"status": false, "message": "Could not read otp from redis"})
 	}
 
 	otp, _ := strconv.Atoi(otpStr)
 
 	if otp != request.OTP {
-		return c.Status(fiber.StatusConflict).JSON(fiber.Map{"message": "Invalid OTP"})
+		return c.Status(fiber.StatusConflict).JSON(fiber.Map{"status": false, "message": "Invalid OTP"})
 	}
 
 	hashed, err := bcrypt.GenerateFromPassword([]byte(request.NewPassword), 10)
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).
-			JSON(fiber.Map{"message": "Some error occured while hashing"})
+			JSON(fiber.Map{"status": false, "message": "Some error occured while hashing"})
 	}
 
 	user.Password = string(hashed)
 	database.DB.Save(&user)
 
-	return c.Status(fiber.StatusOK).JSON(fiber.Map{"message": "Password reset successful"})
+	return c.Status(fiber.StatusOK).JSON(fiber.Map{
+		"status":  true,
+		"message": "Password reset successful",
+	})
 }
 
 func SendVerifyUserOTP(c *fiber.Ctx) error {
@@ -274,12 +289,14 @@ func SendVerifyUserOTP(c *fiber.Ctx) error {
 	}
 
 	if err := c.BodyParser(&request); err != nil {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"message": "Error parsing JSON"})
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"status": false, "message": "Error parsing JSON",
+		})
 	}
 
 	if request.Email == "" {
 		return c.Status(fiber.StatusNotAcceptable).
-			JSON(fiber.Map{"message": "Please pass in an email"})
+			JSON(fiber.Map{"status": false, "message": "Please pass in an email"})
 	}
 
 	otp := rand.Intn(900000) + 100000
@@ -288,26 +305,27 @@ func SendVerifyUserOTP(c *fiber.Ctx) error {
 	database.DB.Find(&user, "email = ?", request.Email)
 
 	if user.ID == 0 {
-		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"message": "The user does not exist"})
+		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"status": false, "message": "The user does not exist"})
 	}
 
 	if user.IsVerified {
-		return c.Status(fiber.StatusConflict).JSON(fiber.Map{"message": "User already verified"})
+		return c.Status(fiber.StatusConflict).JSON(fiber.Map{"status": false, "message": "User already verified"})
 	}
 
-	if err := database.RedisClient.Set(fmt.Sprintf("verification_otp:%s", request.Email), fmt.Sprint(otp), time.Minute*10); err != nil {
+	if err := database.RedisClient.Set(fmt.Sprintf("verification_otp:%s", request.Email),
+		fmt.Sprint(otp), time.Minute*10); err != nil {
 		return c.Status(fiber.StatusInternalServerError).
-			JSON(fiber.Map{"message": "Some error occured", "error": err.Error()})
+			JSON(fiber.Map{"status": false, "message": "Some error occured"})
 	}
 
 	body := fmt.Sprintf("You otp for verification is: %d", otp)
 
 	if err := utils.SendMail("Verification Request", body, request.Email); err != nil {
 		return c.Status(fiber.StatusInternalServerError).
-			JSON(fiber.Map{"message": "Could not send mail", "error": err.Error()})
+			JSON(fiber.Map{"status": false, "message": "Could not send mail"})
 	}
 
-	return c.Status(fiber.StatusOK).JSON(fiber.Map{"message": "Email Sent"})
+	return c.Status(fiber.StatusOK).JSON(fiber.Map{"status": true, "message": "Email Sent"})
 }
 
 func VerifyUserOTP(c *fiber.Ctx) error {
@@ -318,41 +336,87 @@ func VerifyUserOTP(c *fiber.Ctx) error {
 
 	if err := c.BodyParser(&request); err != nil {
 		return c.Status(fiber.StatusBadRequest).
-			JSON(fiber.Map{"message": "Error parsing JSON"})
+			JSON(fiber.Map{"status": false, "message": "Error parsing JSON"})
 	}
 
 	validator := validator.New()
 	if err := validator.Struct(request); err != nil {
 		return c.Status(fiber.StatusNotAcceptable).
-			JSON(fiber.Map{"message": "Please pass in an email and otp"})
+			JSON(fiber.Map{"status": false, "message": "Please pass in an email and otp"})
 	}
 
 	if request.Email == "" {
 		return c.Status(fiber.StatusBadRequest).
-			JSON(fiber.Map{"message": "Please give a valid email"})
+			JSON(fiber.Map{"status": false, "message": "Please give a valid email"})
 	}
 
 	var user models.User
 	database.DB.Find(&user, "email = ?", request.Email)
 
 	if user.ID == 0 {
-		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"message": "User Not Found"})
+		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"status": false, "message": "User Not Found"})
 	}
 
 	otpStr, err := database.RedisClient.Get(fmt.Sprintf("verification_otp:%s", request.Email))
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).
-			JSON(fiber.Map{"message": "Could not read otp from redis", "error": err.Error()})
+			JSON(fiber.Map{"status": false, "message": "Could not read otp from redis"})
 	}
 
 	otp, _ := strconv.Atoi(otpStr)
 
 	if otp != request.OTP {
-		return c.Status(fiber.StatusConflict).JSON(fiber.Map{"message": "Invalid OTP"})
+		return c.Status(fiber.StatusConflict).JSON(fiber.Map{"status": false, "message": "Invalid OTP"})
 	}
 
 	user.IsVerified = true
 	database.DB.Save(&user)
 
-	return c.Status(fiber.StatusOK).JSON(fiber.Map{"message": "Verified User"})
+	return c.Status(fiber.StatusOK).JSON(fiber.Map{"status": true, "message": "Verified User"})
+}
+
+func RoastUser(c *fiber.Ctx) error {
+	requestID := c.Params("id")
+
+	userId, err := strconv.Atoi(requestID)
+	if err != nil {
+		return c.Status(fiber.StatusNotAcceptable).JSON(fiber.Map{
+			"status": false, "message": "Invalid ID",
+		})
+	}
+
+	var user models.User
+	database.DB.Find(&user, "id = ?", userId)
+
+	if user.ID == 0 {
+		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"status": false, "message": "User Not Found"})
+	}
+
+	user.IsRoasted = true
+	database.DB.Save(&user)
+
+	return c.Status(fiber.StatusOK).JSON(fiber.Map{"status": true, "message": "User roasted"})
+}
+
+func RevokeRoast(c *fiber.Ctx) error {
+	requestID := c.Params("id")
+
+	userId, err := strconv.Atoi(requestID)
+	if err != nil {
+		return c.Status(fiber.StatusNotAcceptable).JSON(fiber.Map{
+			"status": false, "message": "Invalid ID",
+		})
+	}
+
+	var user models.User
+	database.DB.Find(&user, "id = ?", userId)
+
+	if user.ID == 0 {
+		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"status": false, "message": "User Not Found"})
+	}
+
+	user.IsRoasted = false
+	database.DB.Save(&user)
+
+	return c.Status(fiber.StatusOK).JSON(fiber.Map{"status": true, "message": "User roast revoked"})
 }

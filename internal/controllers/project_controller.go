@@ -7,7 +7,7 @@ import (
 	"www.github.com/ic-ETITE-24/icetite-24-backend/internal/models"
 )
 
-func CreateProject(c *fiber.Ctx) error { //this will both create and update the project
+func CreateProject(c *fiber.Ctx) error { // this will both create and update the project
 
 	user := c.Locals("user").(models.User)
 
@@ -16,34 +16,34 @@ func CreateProject(c *fiber.Ctx) error { //this will both create and update the 
 
 	if err := c.BodyParser(&createproject); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(&fiber.Map{
-			"Error":  "Failed to parse the body",
-			"Status": false,
+			"status": false,
+			"error":  "Failed to parse the body",
 		})
 	}
 
 	err := validate.Struct(createproject)
 	if err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(&fiber.Map{
-			"Error":  "The resquest didn't provide sufficient data",
-			"Status": false,
+			"status": false,
+			"error":  "The resquest didn't provide sufficient data",
 		})
 	}
 
 	var team models.Team
-	database.DB.Find(&team, "team_id = ?", createproject.TeamID) //maybe changed in future
+	database.DB.Find(&team, "team_id = ?", createproject.TeamID) // maybe changed in future
 	if team.TeamID == 0 {
 		return c.Status(fiber.StatusBadRequest).JSON(&fiber.Map{
-			"Error":  "The team ID provided doesn't exists",
-			"Status": false,
+			"status": false,
+			"error":  "The team ID provided doesn't exists",
 		})
 	}
 
 	var project models.Project
-	database.DB.Find(&project, "team_id = ?", user.TeamId) //maybe changed in future to ID instead of TeamID
+	database.DB.Find(&project, "team_id = ?", user.TeamId) // maybe changed in future to ID instead of TeamID
 	if project.ID != 0 && project.IsFinal {
 		return c.Status(fiber.StatusForbidden).JSON(&fiber.Map{
-			"Error":  "The project submission have been finalized",
-			"Status": false,
+			"status": false,
+			"error":  "The project submission have been finalized",
 		})
 	}
 	createproject.IsFinal = false
@@ -54,14 +54,13 @@ func CreateProject(c *fiber.Ctx) error { //this will both create and update the 
 		database.DB.Model(&project).Updates(&createproject)
 	}
 	return c.Status(fiber.StatusAccepted).JSON(&fiber.Map{
-		"Message": "Route works",
-		"Status":  true,
-		"Data":    project,
+		"status":  true,
+		"message": "Route works",
+		"data":    project,
 	})
 }
 
 func GetProject(c *fiber.Ctx) error {
-
 	var getproject models.Project
 
 	user := c.Locals("user").(models.User)
@@ -69,14 +68,14 @@ func GetProject(c *fiber.Ctx) error {
 
 	if getproject.ID == 0 {
 		return c.Status(fiber.StatusBadRequest).JSON(&fiber.Map{
-			"Error":  "The user hasn't created any submission yet that can be viewed",
-			"Status": false,
+			"status": false,
+			"error":  "The user hasn't created any submission yet that can be viewed",
 		})
 	}
 
 	return c.Status(fiber.StatusAccepted).JSON(&fiber.Map{
-		"Data":   getproject,
-		"Status": true,
+		"status": true,
+		"data":   getproject,
 	})
 }
 
@@ -87,8 +86,8 @@ func DeleteProject(c *fiber.Ctx) error {
 
 	if err := c.BodyParser(&deleteproject); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(&fiber.Map{
-			"Error":  "Unable to parse the data",
-			"Status": false,
+			"status": false,
+			"error":  "Unable to parse the data",
 		})
 	}
 
@@ -96,15 +95,15 @@ func DeleteProject(c *fiber.Ctx) error {
 	database.DB.Find(&project, "name = ?", deleteproject.Name)
 	if project.ID == 0 {
 		return c.Status(fiber.StatusBadRequest).JSON(&fiber.Map{
-			"Error":  "Project by that name doesn't exists",
-			"Status": false,
+			"status": false,
+			"error":  "Project by that name doesn't exists",
 		})
 	}
 	database.DB.Delete(&project)
 	return c.Status(fiber.StatusBadRequest).JSON(&fiber.Map{
-		"Message": "Successfully deleted the project",
-		"Data":    project,
-		"Status":  true,
+		"status":  true,
+		"message": "Successfully deleted the project",
+		"data":    project,
 	})
 }
 
@@ -112,27 +111,27 @@ func FinaliseProject(c *fiber.Ctx) error {
 	user := c.Locals("user").(models.User)
 	if !user.IsLeader {
 		return c.Status(fiber.StatusBadRequest).JSON(&fiber.Map{
-			"Error":  "The user is not the leader",
-			"Status": false,
+			"status": false,
+			"error":  "The user is not the leader",
 		})
 	}
 	var project models.Project
 	database.DB.Find(&project, "team_id = ?", user.TeamId)
 	if project.IsFinal {
 		return c.Status(fiber.StatusBadRequest).JSON(&fiber.Map{
-			"Error":  "The project is already finalised",
-			"Status": false,
+			"status": false,
+			"error":  "The project is already finalised",
 		})
 	}
 	project.IsFinal = true
 	database.DB.Save(&project)
 	return c.Status(fiber.StatusBadRequest).JSON(&fiber.Map{
-		"Message": "Project has been finalised",
-		"Status":  true,
+		"status":  true,
+		"message": "Project has been finalised",
 	})
 }
 
-func CreateTeam(c *fiber.Ctx) error { //dummy function just to check functionality
+func CreateTeam(c *fiber.Ctx) error { // dummy function just to check functionality
 	user := c.Locals("user").(models.User)
 	var Req struct {
 		TeamID int `json:"team_id"`
@@ -151,12 +150,14 @@ func CreateTeam(c *fiber.Ctx) error { //dummy function just to check functionali
 
 	if err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(&fiber.Map{
-			"Error": "Unable to parse the body",
+			"status": false,
+			"error":  "Unable to parse the body",
 		})
 	}
 	return c.Status(fiber.StatusAccepted).JSON(&fiber.Map{
-		"Message": "Team field shld be created",
-		"User":    user,
-		"Data":    entry,
+		"status":  true,
+		"message": "Team field shld be created",
+		"user":    user,
+		"data":    entry,
 	})
 }

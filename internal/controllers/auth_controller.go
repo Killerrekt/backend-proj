@@ -25,7 +25,7 @@ func Login(c *fiber.Ctx) error {
 
 	if err := c.BodyParser(&loginRequest); err != nil {
 		return c.Status(fiber.StatusNotAcceptable).
-			JSON(fiber.Map{"message": "Could not parse JSON"})
+			JSON(fiber.Map{"status": false, "message": "Could not parse JSON"})
 	}
 
 	validator := validator.New()
@@ -33,25 +33,55 @@ func Login(c *fiber.Ctx) error {
 	if err := validator.Struct(loginRequest); err != nil {
 		log.Println(err.Error())
 		return c.Status(fiber.StatusNotAcceptable).
-			JSON(fiber.Map{"message": "Please pass in all the fields"})
+			JSON(fiber.Map{"status": false, "message": "Please pass in all the fields"})
 	}
 
 	database.DB.Find(&user, "email = ?", loginRequest.Email)
 
 	if user.ID == 0 {
-		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"message": "User does not exist"})
+		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"status": false, "message": "User does not exist"})
+	}
+
+	if user.IsRoasted {
+		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
+			"status": false, "message": "User is banned",
+			"verification_status": user.IsVerified, "roasted": true,
+		})
 	}
 
 	err := bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(loginRequest.Password))
 	if err != nil {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-			"message": "Invalid Request",
+		return c.Status(fiber.StatusConflict).JSON(fiber.Map{
+			"status": false, "message": "invalid password",
+			"verification_status": user.IsVerified, "roasted": false,
 		})
+	}
+
+	if !user.IsVerified {
+		return c.Status(fiber.StatusUnauthorized).
+			JSON(fiber.Map{
+				"status": false, "message": "User is not verified",
+				"verification_status": false, "roasted": false,
+			})
 	}
 
 	payload := utils.TokenPayload{
 		Email: user.Email,
 		Role:  user.Role,
+	}
+
+	accessToken, err := utils.CreateToken(
+		time.Minute*15,
+		payload,
+		utils.ACCESS_TOKEN,
+		viper.GetString("ACCESS_SECRET_KEY"),
+	)
+	if err != nil {
+		log.Println(err.Error())
+		return c.Status(fiber.StatusInternalServerError).
+			JSON(fiber.Map{
+				"status": false, "message": "Could not sign access token",
+			})
 	}
 
 	refreshToken, err := utils.CreateToken(
@@ -62,21 +92,21 @@ func Login(c *fiber.Ctx) error {
 	)
 	if err != nil {
 		log.Println(err.Error())
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-			"message": "Could not sign refresh token",
-		})
+		return c.Status(fiber.StatusInternalServerError).
+			JSON(fiber.Map{"status": false, "message": "Could not sign refresh token"})
 	}
 
 	if err := database.RedisClient.Set(refreshToken, user.Email, time.Hour*24); err != nil {
 		log.Println(err.Error())
 		return c.Status(fiber.StatusInternalServerError).
-			JSON(fiber.Map{"message": "Some error occured"})
+			JSON(fiber.Map{"status": false, "message": "Some error occured"})
 	}
 
-	log.Println("Set Refresh token successful")
-
 	return c.Status(fiber.StatusOK).
-		JSON(fiber.Map{"message": "Login Successful", "Access Toekn": "To get an access token please send a request to the refresh route", "Refresh Token": refreshToken})
+		JSON(fiber.Map{
+			"status": true, "message": "Login Successful", "access_token": accessToken,
+			"refresh_token": refreshToken, "verification_status": user.IsVerified, "roasted": false,
+		})
 }
 
 func Refresh(c *fiber.Ctx) error {
@@ -86,7 +116,7 @@ func Refresh(c *fiber.Ctx) error {
 
 	if err := c.BodyParser(&tokenReq); err != nil {
 		return c.Status(fiber.StatusBadRequest).
-			JSON(fiber.Map{"message": "Could not process JSON"})
+			JSON(fiber.Map{"status": false, "message": "Could not process JSON"})
 	}
 
 	validator := validator.New()
@@ -94,7 +124,7 @@ func Refresh(c *fiber.Ctx) error {
 	if err := validator.Struct(tokenReq); err != nil {
 		log.Println(err.Error())
 		return c.Status(fiber.StatusNotAcceptable).
-			JSON(fiber.Map{"message": "Please pass in the correct data"})
+			JSON(fiber.Map{"status": false, "message": "Please pass in the correct data"})
 	}
 
 	local := c.Locals("user")
@@ -114,10 +144,10 @@ func Refresh(c *fiber.Ctx) error {
 	if err != nil {
 		log.Println(err.Error())
 		return c.Status(fiber.StatusInternalServerError).
-			JSON(fiber.Map{"message": "Could not sign access token"})
+			JSON(fiber.Map{"status": false, "message": "Could not sign access token"})
 	}
 
-	return c.Status(fiber.StatusOK).JSON(fiber.Map{"Access Token": accessToken})
+	return c.Status(fiber.StatusOK).JSON(fiber.Map{"status": true, "access_token": accessToken})
 }
 
 func Logout(c *fiber.Ctx) error {
@@ -126,25 +156,27 @@ func Logout(c *fiber.Ctx) error {
 	}
 
 	if err := c.BodyParser(&request); err != nil {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"message": "Error parsing JSON"})
+		return c.Status(fiber.StatusBadRequest).
+			JSON(fiber.Map{"status": false, "message": "Error parsing JSON"})
 	}
 
 	if request.RefreshToken == "" {
 		return c.Status(fiber.StatusNotAcceptable).
-			JSON(fiber.Map{"message": "Please pass in the refresh token"})
+			JSON(fiber.Map{"status": false, "message": "Please pass in the refresh token"})
 	}
 
 	if _, err := database.RedisClient.Get(request.RefreshToken); err != nil {
 		if err == redis.Nil {
-			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"message": "User not logged in"})
+			return c.Status(fiber.StatusBadRequest).
+				JSON(fiber.Map{"status": false, "message": "User not logged in"})
 		}
 	}
 
 	if err := database.RedisClient.Delete(request.RefreshToken); err != nil {
 		log.Println(err.Error())
 		return c.Status(fiber.StatusInternalServerError).
-			JSON(fiber.Map{"message": "Some error occured"})
+			JSON(fiber.Map{"status": false, "message": "Some error occured"})
 	}
 
-	return c.Status(fiber.StatusOK).JSON(fiber.Map{"message": "Logout Successful"})
+	return c.Status(fiber.StatusOK).JSON(fiber.Map{"status": true, "message": "Logout Successful"})
 }
