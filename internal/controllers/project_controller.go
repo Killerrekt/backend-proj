@@ -1,8 +1,11 @@
 package controllers
 
 import (
+	"errors"
+
 	"github.com/go-playground/validator/v10"
 	"github.com/gofiber/fiber/v2"
+	"gorm.io/gorm"
 	"www.github.com/ic-ETITE-24/icetite-24-backend/internal/database"
 	"www.github.com/ic-ETITE-24/icetite-24-backend/internal/models"
 )
@@ -48,14 +51,25 @@ func CreateProject(c *fiber.Ctx) error { // this will both create and update the
 	}
 	createproject.IsFinal = false
 
+	var errstring string
+
 	if project.ID == 0 {
-		database.DB.Create(&createproject)
+		err := database.DB.Create(&createproject)
+		errstring = DBerrorHandling(err)
 	} else {
-		database.DB.Model(&project).Updates(&createproject)
+		err := database.DB.Model(&project).Updates(&createproject)
+		errstring = DBerrorHandling(err)
 	}
+	if errstring != "" {
+		return c.Status(fiber.StatusBadRequest).JSON(&fiber.Map{
+			"error":  errstring,
+			"status": false,
+		})
+	}
+
 	return c.Status(fiber.StatusAccepted).JSON(&fiber.Map{
 		"status":  true,
-		"message": "Route works",
+		"message": "project have been created",
 		"data":    project,
 	})
 }
@@ -64,7 +78,14 @@ func GetProject(c *fiber.Ctx) error {
 	var getproject models.Project
 
 	user := c.Locals("user").(models.User)
-	database.DB.Find(&getproject, "team_id = ?", user.TeamId)
+	err := database.DB.Find(&getproject, "team_id = ?", user.TeamId)
+	errstring := DBerrorHandling(err)
+	if errstring != "" {
+		return c.Status(fiber.StatusBadRequest).JSON(&fiber.Map{
+			"error":  errstring,
+			"status": false,
+		})
+	}
 
 	if getproject.ID == 0 {
 		return c.Status(fiber.StatusBadRequest).JSON(&fiber.Map{
@@ -76,6 +97,23 @@ func GetProject(c *fiber.Ctx) error {
 	return c.Status(fiber.StatusAccepted).JSON(&fiber.Map{
 		"status": true,
 		"data":   getproject,
+	})
+}
+
+func GetAllProject(c *fiber.Ctx) error {
+	var data []models.Project
+	err := database.DB.Find(&data)
+	errstring := DBerrorHandling(err)
+	if errstring != "" {
+		return c.Status(fiber.StatusBadRequest).JSON(&fiber.Map{
+			"error":  errstring,
+			"status": false,
+		})
+	}
+
+	return c.Status(fiber.StatusAccepted).JSON(&fiber.Map{
+		"data":   data,
+		"status": true,
 	})
 }
 
@@ -160,4 +198,15 @@ func CreateTeam(c *fiber.Ctx) error { // dummy function just to check functional
 		"user":    user,
 		"data":    entry,
 	})
+}
+
+func DBerrorHandling(err *gorm.DB) string {
+	if err.Error != nil {
+		if errors.Is(err.Error, gorm.ErrDuplicatedKey) {
+			return "Duplicate field was tried to be entered"
+		} else {
+			return err.Error.Error()
+		}
+	}
+	return ""
 }
