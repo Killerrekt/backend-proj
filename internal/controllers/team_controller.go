@@ -1,6 +1,8 @@
 package controllers
 
 import (
+	"log"
+
 	"github.com/gofiber/fiber/v2"
 	"github.com/google/uuid"
 	"www.github.com/ic-ETITE-24/icetite-24-backend/internal/database"
@@ -12,7 +14,7 @@ const MaxTeamMembers = 4
 // CREATE TEAM
 func CreateTeam(c *fiber.Ctx) error {
 	// Get logged in user
-	user := c.Locals("user").(*models.User)
+	user := c.Locals("user").(models.User)
 
 	// Validate request
 	var data struct {
@@ -20,32 +22,41 @@ func CreateTeam(c *fiber.Ctx) error {
 	}
 
 	if err := c.BodyParser(&data); err != nil {
-		return err
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"status": false, "message": "error parsing JSON",
+		})
+	}
+
+	if data.Name == "" {
+		return c.Status(fiber.StatusNotAcceptable).JSON(fiber.Map{
+			"status":  false,
+			"message": "name is required",
+		})
 	}
 
 	// Check if user already in team
 	if user.TeamID != 0 {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-			"error": "already in team",
+			"status":  false,
+			"message": "already in team",
 		})
 	}
 
 	// Check if name exists
 	var existing models.Team
-	if err := database.DB.Where("name = ?", data.Name).First(&existing).Error; err == nil {
+	if err := database.DB.Where("name = ?", data.Name).First(&existing).Error; err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-			"error": "name exists",
+			"status": false,
+			"error":  "A team with the same name already exists",
 		})
 	}
 
 	// Create team
 	team := models.Team{
-		Name:   data.Name,
-		TeamID: uint(uuid.New().ID()), // Generate a hashed UUID
+		Name:     data.Name,
+		TeamID:   uint(uuid.New().ID()), // Generate a hashed UUID
+		LeaderID: user.ID,
 	}
-
-	// Add logged in user
-	team.Users = append(team.Users, *user)
 
 	// Save
 	if err := database.DB.Create(&team).Error; err != nil {
@@ -65,7 +76,7 @@ func CreateTeam(c *fiber.Ctx) error {
 // JOIN TEAM
 func JoinTeam(c *fiber.Ctx) error {
 	// Get logged in user
-	user := c.Locals("user").(*models.User)
+	user := c.Locals("user").(models.User)
 
 	// Validate request
 	var data struct {
@@ -73,13 +84,16 @@ func JoinTeam(c *fiber.Ctx) error {
 	}
 
 	if err := c.BodyParser(&data); err != nil {
-		return err
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"status": false, "message": "error parsing JSON",
+		})
 	}
 
 	// Check if user already in team
 	if user.TeamID != 0 {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-			"error": "already in team",
+			"status":  false,
+			"message": "already in team",
 		})
 	}
 
@@ -87,23 +101,25 @@ func JoinTeam(c *fiber.Ctx) error {
 	var team models.Team
 	if err := database.DB.Where("team_code = ?", data.Code).Preload("Users").First(&team).Error; err != nil {
 		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
-			"error": "invalid code",
+			"status":  false,
+			"message": "invalid code",
 		})
 	}
 
 	// Check if full
-	if len(team.Users) >= 4 {
+	if team.MembersCount >= 4 {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-			"error": "team full",
+			"status":  false,
+			"message": "team is full",
 		})
 	}
 
-	// Add user
-	team.Users = append(team.Users, *user)
-
 	// Save
 	if err := database.DB.Save(&team).Error; err != nil {
-		return err
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"status":  false,
+			"message": "Could not create team",
+		})
 	}
 
 	return c.JSON(team)
@@ -122,20 +138,6 @@ func GetTeam(c *fiber.Ctx) error {
 		})
 	}
 
-	// Get logged in user
-	user := c.Locals("user").(*models.User)
-
-	// Set custom fields
-	team.MembersCount = len(team.Users)
-
-	// Check if the user is a leader
-	for _, u := range team.Users {
-		if u.ID == user.ID && u.IsLeader {
-			team.IsUserLeader = true
-			break
-		}
-	}
-
 	return c.JSON(team)
 }
 
@@ -150,7 +152,16 @@ func UpdateTeam(c *fiber.Ctx) error {
 	}
 
 	if err := c.BodyParser(&data); err != nil {
-		return err
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"status": false, "message": "error parsing JSON",
+		})
+	}
+
+	if data.Name == "" {
+		return c.Status(fiber.StatusNotAcceptable).JSON(fiber.Map{
+			"status":  false,
+			"message": "name is required",
+		})
 	}
 
 	// Find team
@@ -181,21 +192,31 @@ func DeleteTeam(c *fiber.Ctx) error {
 	var team models.Team
 	if err := database.DB.First(&team, id).Error; err != nil {
 		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
-			"error": "team not found",
+			"status": false,
+			"error":  "team not found",
 		})
 	}
 
 	// Delete team
 	if err := database.DB.Delete(&team).Error; err != nil {
-		return err
+		log.Println(err.Error())
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"status":  false,
+			"message": "Some error occured check logs",
+		})
 	}
 
 	// Remove team from members
 	if err := database.DB.Model(&models.User{}).Where("team_id = ?", id).Update("team_id", 0).Error; err != nil {
-		return err
+		log.Println(err.Error())
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"status":  false,
+			"message": "Some error occured check logs",
+		})
 	}
 
 	return c.JSON(fiber.Map{
+		"status":  true,
 		"message": "team deleted",
 	})
 }
@@ -250,3 +271,6 @@ func findTeamByID(id string) (*models.Team, error) {
 func removeTeamFromMembers(teamID string) error {
 	return database.DB.Model(&models.User{}).Where("team_id = ?", teamID).Update("team_id", 0).Error
 }
+
+// GET ALL TEAMS
+// GET LEADER INFO

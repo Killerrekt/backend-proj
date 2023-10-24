@@ -10,9 +10,9 @@ type Team struct {
 	ProjectID    uint
 	Round        int
 	IdeaID       uint
+	LeaderID     uint
 	MembersCount int     `gorm:"-"` // not saved in DB
-	IsUserLeader bool    `gorm:"-"` // not saved in DB
 	TeamID       uint    `gorm:"primaryKey;unique"`
-	Users        []User  `gorm:"foreignKey:TeamID;references:ID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE"`
-	Project      Project `gorm:"foreignKey:TeamID;references:ID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE"`
+	Users        []User  `gorm:"foreignKey:TeamId;references:TeamID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE"`
+	Project      Project `gorm:"foreignKey:TeamID;references:TeamID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE"`
 }
