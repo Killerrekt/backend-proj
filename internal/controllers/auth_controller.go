@@ -42,7 +42,7 @@ func Login(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"status": false, "message": "User does not exist"})
 	}
 
-	if user.IsRoasted {
+	if user.IsBanned {
 		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
 			"status": false, "message": "User is banned",
 			"verification_status": user.IsVerified, "roasted": true,

@@ -25,7 +25,7 @@ func CreateProject(c *fiber.Ctx) error { // this will both create and update the
 	if err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(&fiber.Map{
 			"status": false,
-			"error":  "The resquest didn't provide sufficient data",
+			"error":  "The request didn't provide sufficient data",
 		})
 	}
 
@@ -39,7 +39,7 @@ func CreateProject(c *fiber.Ctx) error { // this will both create and update the
 	}
 
 	var project models.Project
-	database.DB.Find(&project, "team_id = ?", user.TeamId) // maybe changed in future to ID instead of TeamID
+	database.DB.Find(&project, "team_id = ?", user.TeamID) // maybe changed in future to ID instead of TeamID
 	if project.ID != 0 && project.IsFinal {
 		return c.Status(fiber.StatusForbidden).JSON(&fiber.Map{
 			"status": false,
@@ -64,7 +64,7 @@ func GetProject(c *fiber.Ctx) error {
 	var getproject models.Project
 
 	user := c.Locals("user").(models.User)
-	database.DB.Find(&getproject, "team_id = ?", user.TeamId)
+	database.DB.Find(&getproject, "team_id = ?", user.TeamID)
 
 	if getproject.ID == 0 {
 		return c.Status(fiber.StatusBadRequest).JSON(&fiber.Map{
@@ -116,7 +116,7 @@ func FinaliseProject(c *fiber.Ctx) error {
 		})
 	}
 	var project models.Project
-	database.DB.Find(&project, "team_id = ?", user.TeamId)
+	database.DB.Find(&project, "team_id = ?", user.TeamID)
 	if project.IsFinal {
 		return c.Status(fiber.StatusBadRequest).JSON(&fiber.Map{
 			"status": false,
@@ -134,12 +134,12 @@ func FinaliseProject(c *fiber.Ctx) error {
 func CreateTeam(c *fiber.Ctx) error { // dummy function just to check functionality
 	user := c.Locals("user").(models.User)
 	var Req struct {
-		TeamID int `json:"team_id"`
+		TeamID uint `json:"team_id"`
 	}
 
 	err := c.BodyParser(&Req)
 
-	user.TeamId = Req.TeamID
+	user.TeamID = Req.TeamID
 	database.DB.Save(&user)
 
 	entry := models.Team{
@@ -156,7 +156,7 @@ func CreateTeam(c *fiber.Ctx) error { // dummy function just to check functional
 	}
 	return c.Status(fiber.StatusAccepted).JSON(&fiber.Map{
 		"status":  true,
-		"message": "Team field shld be created",
+		"message": "Team field should be created",
 		"user":    user,
 		"data":    entry,
 	})

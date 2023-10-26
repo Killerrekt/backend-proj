@@ -16,13 +16,11 @@ func main() {
 	app := fiber.New()
 
 	redisConfig, err := config.LoadRedisConfig()
-
 	if err != nil {
 		log.Fatalln("Failed to load redis environment variable! \n", err.Error())
 	}
 
 	config, err := config.LoadConfig(".")
-
 	if err != nil {
 		log.Fatalln("Failed to load environment variables! \n", err.Error())
 	}
@@ -43,19 +41,18 @@ func main() {
 		AllowCredentials: true,
 	}))
 
-	apiGroup := app.Group("/v1")
-
-	// routes.AuthRoutes(apiGroup)
-
-	apiGroup.Get("/healthcheck", func(c *fiber.Ctx) error {
+	app.Get("/ping", func(c *fiber.Ctx) error {
 		return c.Status(200).JSON(fiber.Map{
 			"status":  "success",
-			"message": "icETITE-24 Backend API is up and running.",
+			"message": "Pong -> Welcome to the ICETITE 24 Hackathon Backend",
 		})
 	})
 
 	routes.UserRoutes(app)
+	routes.PaymentRoutes(app)
 	routes.ProjectsRoutes(app)
+	routes.AdminRoutes(app)
+	routes.EnquiryRoutes(app)
 
 	app.Use(func(c *fiber.Ctx) error {
 		return c.Status(404).JSON(fiber.Map{

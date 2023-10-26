@@ -22,13 +22,13 @@ func CallBackURL(c *fiber.Ctx) error {
 		RegistrationNo  int64   `json:"registration_no" validate:"required"`
 		Token           string  `json:"token" validate:"required"`
 		IToken          string  `json:"itoken" validate:"required"`
-		TransactionId   int     `json:"transaction_id" validate:"required"`
+		TransactionID   int     `json:"transaction_id" validate:"required"`
 		PaymentStatus   bool    `json:"status" validate:"required"`
 		Amount          float32 `json:"amount" validate:"required"`
 		InvoiceNumber   int64   `json:"invoice_no" validate:"required"`
 		TransactionDate string  `json:"transaction_date" validate:"required"`
 		CurrencyCode    string  `json:"currency_code" validate:"required"`
-		UserId          int     `json:"user_id" validate:"required"`
+		UserID          uint    `json:"user_id" validate:"required"`
 	}
 
 	if err := c.BodyParser(&request); err != nil {
@@ -37,25 +37,24 @@ func CallBackURL(c *fiber.Ctx) error {
 		})
 	}
 
-	validator := validator.New()
-
-	if err := validator.Struct(request); err != nil {
+	validate := validator.New()
+	if err := validate.Struct(request); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 			"status": false, "message": "Please pass in all the fields",
 		})
 	}
 
 	var invoice models.Invoice
-	result := database.DB.Where("registration_no = ? AND user_id = ?", request.RegistrationNo, int(request.UserId)).First(&invoice)
+	result := database.DB.Where("registration_no = ? AND user_id = ?", request.RegistrationNo, request.UserID).First(&invoice)
 	if result.Error != nil {
 		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"status": false, "message": "Invoice not found"})
 	}
 
 	updates := models.Invoice{
-		UserId:          request.UserId,
+		UserID:          request.UserID,
 		IToken:          request.IToken,
 		Token:           request.Token,
-		TransactionId:   request.TransactionId,
+		TransactionID:   request.TransactionID,
 		PaymentStatus:   request.PaymentStatus,
 		Amount:          request.Amount,
 		InvoiceNumber:   request.InvoiceNumber,
@@ -81,25 +80,25 @@ func InitiatePayment(c *fiber.Ctx) error {
 	phoneNumber := user.PhoneNumber
 	email := user.Email
 	country := user.Country
-	currency_code := "USD"
+	currencyCode := "USD"
 	amount := float32(20)
 	RegistrationNo := generateUniqueRegistrationNo()
 
 	if country == "IN" {
 		amount = float32(599)
-		currency_code = "INR"
+		currencyCode = "INR"
 	}
 
 	invoice := models.Invoice{
-		UserId:          int(user.ID),
+		UserID:          user.ID,
 		IToken:          "null",
-		TransactionId:   0,
+		TransactionID:   0,
 		RegistrationNo:  RegistrationNo,
 		PaymentStatus:   false,
 		Amount:          amount,
 		InvoiceNumber:   0,
 		TransactionDate: "0",
-		CurrencyCode:    currency_code,
+		CurrencyCode:    currencyCode,
 	}
 
 	if err := database.DB.Create(&invoice).Error; err != nil {
@@ -112,7 +111,7 @@ func InitiatePayment(c *fiber.Ctx) error {
 		"name":           string(name),
 		"mobileNo":       phoneNumber,
 		"email":          email,
-		"currency_code":  currency_code,
+		"currency_code":  currencyCode,
 		"amount":         amount,
 		"registrationNo": RegistrationNo,
 		"formSubmit":     "Submit",

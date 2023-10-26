@@ -20,7 +20,7 @@ type CreateProject struct {
 	Desc         string `json:"desc" validate:"required"`
 	Githublink   string `json:"github" validate:"required"`
 	FigmaLink    string `json:"figma"`
-	VideoLink    string `json:"video" validate:"required"`
+	VideoLink    string `json:"video"`
 	DriveLink    string `json:"drive"`
 	ProjectTrack string `json:"project_track" validate:"required"`
 	UserID       uint   `json:"ID" validate:"required"`
