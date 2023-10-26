@@ -28,12 +28,12 @@ func CreateProject(c *fiber.Ctx) error { // this will both create
 	if err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(&fiber.Map{
 			"status": false,
-			"error":  "The resquest didn't provide sufficient data",
+			"error":  "The request didn't provide sufficient data",
 		})
 	}
 
 	var team models.Team
-	database.DB.Find(&team, "team_id = ?", user.TeamId) // maybe changed in future
+	database.DB.Find(&team, "team_id = ?", user.TeamID) // maybe changed in future
 	if team.TeamID == 0 {
 		return c.Status(fiber.StatusBadRequest).JSON(&fiber.Map{
 			"status": false,
@@ -42,7 +42,7 @@ func CreateProject(c *fiber.Ctx) error { // this will both create
 	}
 
 	var project models.Project
-	database.DB.Find(&project, "team_id = ?", user.TeamId) // maybe changed in future to ID instead of TeamID
+	database.DB.Find(&project, "team_id = ?", user.TeamID) // maybe changed in future to ID instead of TeamID
 	if project.ID != 0 && project.IsFinal {
 		return c.Status(fiber.StatusForbidden).JSON(&fiber.Map{
 			"status": false,
@@ -59,7 +59,7 @@ func CreateProject(c *fiber.Ctx) error { // this will both create
 		})
 	}
 	createproject.IsFinal = false
-	createproject.TeamID = uint(user.TeamId)
+	createproject.TeamID = uint(user.TeamID)
 
 	errdb := database.DB.Create(&createproject)
 	if check := DBerrorHandling(errdb); check != "" {
@@ -79,7 +79,7 @@ func GetProject(c *fiber.Ctx) error {
 	var getproject models.Project
 
 	user := c.Locals("user").(models.User)
-	err := database.DB.Find(&getproject, "team_id = ?", user.TeamId)
+	err := database.DB.Find(&getproject, "team_id = ?", user.TeamID)
 	if check := DBerrorHandling(err); check != "" {
 		return c.Status(fiber.StatusBadRequest).JSON(&fiber.Map{
 			"error":  check,
@@ -118,7 +118,7 @@ func GetAllProject(c *fiber.Ctx) error {
 func DeleteProject(c *fiber.Ctx) error {
 	user := c.Locals("user").(models.User)
 	var project models.Project
-	database.DB.Find(&project, "team_id = ?", user.TeamId)
+	database.DB.Find(&project, "team_id = ?", user.TeamID)
 	if project.ID == 0 {
 		return c.Status(fiber.StatusBadRequest).JSON(&fiber.Map{
 			"status": false,
@@ -148,7 +148,7 @@ func FinaliseProject(c *fiber.Ctx) error {
 		})
 	}
 	var project models.Project
-	err := database.DB.Find(&project, "team_id = ?", user.TeamId)
+	err := database.DB.Find(&project, "team_id = ?", user.TeamID)
 	if check := DBerrorHandling(err); check != "" {
 		return c.Status(fiber.StatusBadRequest).JSON(&fiber.Map{
 			"error":  check,
@@ -187,7 +187,7 @@ func UpdateProject(c *fiber.Ctx) error {
 	}
 
 	var currproject models.Project
-	err := database.DB.Find(&currproject, "team_id = ?", user.TeamId)
+	err := database.DB.Find(&currproject, "team_id = ?", user.TeamID)
 	if check := DBerrorHandling(err); check != "" {
 		return c.Status(fiber.StatusBadRequest).JSON(&fiber.Map{
 			"error":  check,
@@ -240,12 +240,12 @@ func UpdateProject(c *fiber.Ctx) error {
 func CreateTeam(c *fiber.Ctx) error { // dummy function just to check functionality
 	user := c.Locals("user").(models.User)
 	var Req struct {
-		TeamID int `json:"team_id"`
+		TeamID uint `json:"team_id"`
 	}
 
 	err := c.BodyParser(&Req)
 
-	user.TeamId = Req.TeamID
+	user.TeamID = Req.TeamID
 	database.DB.Save(&user)
 
 	entry := models.Team{
@@ -262,7 +262,7 @@ func CreateTeam(c *fiber.Ctx) error { // dummy function just to check functional
 	}
 	return c.Status(fiber.StatusAccepted).JSON(&fiber.Map{
 		"status":  true,
-		"message": "Team field shld be created",
+		"message": "Team field should be created",
 		"user":    user,
 		"data":    entry,
 	})
@@ -275,4 +275,4 @@ func DBerrorHandling(err *gorm.DB) string {
 	return ""
 }
 
-//update create project, update project route
+// update create project, update project route

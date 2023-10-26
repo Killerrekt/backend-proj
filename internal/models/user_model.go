@@ -17,16 +17,17 @@ type User struct {
 	Country      string    `json:"country"`
 	DateOfBirth  time.Time `json:"date_of_birth"`
 	Bio          string    `json:"bio"`
-	TeamId       int       `json:"team_id"`
-	IsLeader     bool      `json:"is_leader"`
-	IsApproved   bool      `json:"is_approved"`
+	TeamID       uint      `json:"team_id"`
+	IsLeader     bool      `json:"is_leader"     gorm:"default:false"`
+	IsApproved   bool      `json:"is_approved"   gorm:"default:false"`
 	IsVerified   bool      `json:"is_verified"   gorm:"default:false"`
-	IsRoasted    bool      `json:"is_roasted"    gorm:"default:false"`
+	IsBanned     bool      `json:"is_banned"     gorm:"default:false"`
+	IsPaid       bool      `json:"is_paid"       gorm:"default:false"`
 	PhoneNumber  string    `json:"phone_number"`
 	College      string    `json:"college"`
 	Github       string    `json:"github"`
 	TokenVersion int       `json:"token_version" gorm:"default:0"`
-	Invoice      []Invoice `                     gorm:"foreignKey:UserId;References:ID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE"`
+	Invoice      []Invoice `                     gorm:"foreignKey:UserID;References:ID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE"`
 }
 
 type CreateUser struct {
@@ -41,4 +42,18 @@ type CreateUser struct {
 	College     string `json:"college"       validate:"required"`
 	Github      string `json:"github"        validate:"required"`
 	Country     string `json:"country"       validate:"required"`
+}
+
+type UserProfile struct {
+	FirstName   string `json:"first_name"`
+	LastName    string `json:"last_name"`
+	Email       string `json:"email"`
+	Gender      string `json:"gender"`
+	DateOfBirth string `json:"date_of_birth"`
+	Bio         string `json:"bio"`
+	PhoneNumber string `json:"phone_number"`
+	College     string `json:"college"`
+	Github      string `json:"github"`
+	Country     string `json:"country"`
+	Team        Team   `json:"team"`
 }
