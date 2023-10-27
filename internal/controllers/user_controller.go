@@ -33,7 +33,11 @@ func CreateUser(c *fiber.Ctx) error {
 			JSON(fiber.Map{"status": false, "message": "Please pass in all the required fields"})
 	}
 
-	dob, _ := time.Parse("2006-01-02", createUser.DateOfBirth)
+	dob, err := time.Parse("2006-01-02", createUser.DateOfBirth)
+	if err != nil {
+		return c.Status(fiber.StatusBadRequest).
+			JSON(fiber.Map{"status": false, "message": "Invalid date of birth format"})
+	}
 
 	hashedPassword, _ := bcrypt.GenerateFromPassword([]byte(createUser.Password), 10)
 
@@ -287,7 +291,8 @@ func VerifyForgotPasswordOTP(c *fiber.Ctx) error {
 	otp, _ := strconv.Atoi(otpStr)
 
 	if otp != request.OTP {
-		return c.Status(fiber.StatusConflict).JSON(fiber.Map{"status": false, "message": "Invalid OTP"})
+		return c.Status(fiber.StatusConflict).
+			JSON(fiber.Map{"status": false, "message": "Invalid OTP"})
 	}
 
 	hashed, err := bcrypt.GenerateFromPassword([]byte(request.NewPassword), 10)
@@ -338,7 +343,8 @@ func SendVerifyUserOTP(c *fiber.Ctx) error {
 	}
 
 	if user.IsVerified {
-		return c.Status(fiber.StatusConflict).JSON(fiber.Map{"status": false, "message": "User already verified"})
+		return c.Status(fiber.StatusConflict).
+			JSON(fiber.Map{"status": false, "message": "User already verified"})
 	}
 
 	if err := database.RedisClient.Set(fmt.Sprintf("verification_otp:%s", request.Email),
@@ -402,7 +408,8 @@ func VerifyUserOTP(c *fiber.Ctx) error {
 	otp, _ := strconv.Atoi(otpStr)
 
 	if otp != request.OTP {
-		return c.Status(fiber.StatusConflict).JSON(fiber.Map{"status": false, "message": "Invalid OTP"})
+		return c.Status(fiber.StatusConflict).
+			JSON(fiber.Map{"status": false, "message": "Invalid OTP"})
 	}
 
 	user.IsVerified = true
@@ -545,4 +552,47 @@ func UserDashboard(c *fiber.Ctx) error {
 	}
 
 	return c.Status(fiber.StatusOK).JSON(fiber.Map{"status": true, "user": me})
+}
+
+func UpdateUser(c *fiber.Ctx) error {
+	var request models.UpdateUser
+
+	if err := c.BodyParser(&request); err != nil {
+		return c.Status(fiber.StatusBadRequest).
+			JSON(fiber.Map{"status": false, "message": "Error parsing JSON"})
+	}
+
+	validator := validator.New()
+	if err := validator.Struct(request); err != nil {
+		log.Println(err.Error())
+		return c.Status(fiber.StatusNotAcceptable).
+			JSON(fiber.Map{"status": false, "message": "Please pass in all the fields"})
+	}
+
+	user := c.Locals("user").(models.User)
+
+	dob, err := time.Parse("2006-01-02", request.DateOfBirth)
+	if err != nil {
+		return c.Status(fiber.StatusBadRequest).
+			JSON(fiber.Map{"status": false, "message": "Invalid date of birth format"})
+	}
+
+	user.FirstName = request.FirstName
+	user.LastName = request.LastName
+	user.DateOfBirth = dob
+	user.College = request.College
+	user.Bio = request.Bio
+	user.Gender = request.Gender
+	user.PhoneNumber = request.PhoneNumber
+	user.Github = request.Github
+	user.Country = request.Country
+
+	result := database.DB.Save(&user)
+	if result.Error != nil {
+		return c.Status(fiber.StatusInternalServerError).
+			JSON(fiber.Map{"status": false, "message": result.Error.Error()})
+	}
+
+	return c.Status(fiber.StatusOK).
+		JSON(fiber.Map{"status": true, "message": "User updated successfully"})
 }

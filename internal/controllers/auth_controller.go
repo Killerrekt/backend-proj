@@ -39,7 +39,8 @@ func Login(c *fiber.Ctx) error {
 	database.DB.Find(&user, "email = ?", loginRequest.Email)
 
 	if user.ID == 0 {
-		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"status": false, "message": "User does not exist"})
+		return c.Status(fiber.StatusNotFound).
+			JSON(fiber.Map{"status": false, "message": "User does not exist"})
 	}
 
 	if user.IsBanned {
@@ -105,7 +106,7 @@ func Login(c *fiber.Ctx) error {
 	return c.Status(fiber.StatusOK).
 		JSON(fiber.Map{
 			"status": true, "message": "Login Successful", "access_token": accessToken,
-			"refresh_token": refreshToken, "verification_status": user.IsVerified, "roasted": false,
+			"refresh_token": refreshToken, "verification_status": user.IsVerified, "payment_status": user.IsPaid, "roasted": false,
 		})
 }
 
