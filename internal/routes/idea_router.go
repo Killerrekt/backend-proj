@@ -13,4 +13,5 @@ func IdeasRoutes(incomingRoutes *fiber.App) {
 	ideaRoutes.Post("/update", middleware.VerifyAccessToken, controllers.UpdateIdea)
 	ideaRoutes.Get("/get", middleware.VerifyAccessToken, controllers.GetIdea)
 	ideaRoutes.Delete("/delete", middleware.VerifyAccessToken, controllers.DeleteIdea)
+	ideaRoutes.Get("/getall", middleware.VerifyAdminToken, controllers.GetAllIdea)
 }

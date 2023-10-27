@@ -66,6 +66,7 @@ func UpdateIdea(c *fiber.Ctx) error {
 		FigmaLink string `json:"figma_link"`
 		DriveLink string `json:"drive_link"`
 		VideoLink string `json:"video_link"`
+		Desc      string `json:"desc"`
 	}
 
 	if err := c.BodyParser(&req); err != nil {
@@ -94,6 +95,9 @@ func UpdateIdea(c *fiber.Ctx) error {
 	if req.VideoLink != "" {
 		exists.VideoLink = req.VideoLink
 	}
+	if req.Desc != "" {
+		exists.Desc = req.Desc
+	}
 
 	if err := database.DB.Save(&exists); err.Error != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(&fiber.Map{
@@ -118,7 +122,12 @@ func DeleteIdea(c *fiber.Ctx) error {
 			"status": false,
 		})
 	}
-	database.DB.Unscoped().Delete(&exist)
+	if err := database.DB.Unscoped().Delete(&exist); err.Error != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(&fiber.Map{
+			"error":  "something went wrong while deleting the idea",
+			"status": false,
+		})
+	}
 	return c.Status(fiber.StatusAccepted).JSON(&fiber.Map{
 		"message": "Idea is deleted",
 		"status":  true,
@@ -140,5 +149,20 @@ func GetIdea(c *fiber.Ctx) error {
 		"message": "successfully fetched the data",
 		"data":    exist,
 		"status":  true,
+	})
+}
+
+func GetAllIdea(c *fiber.Ctx) error {
+	var allideas []models.Idea
+	database.DB.Find(&allideas)
+	if len(allideas) == 0 {
+		return c.Status(fiber.StatusBadRequest).JSON(&fiber.Map{
+			"message": "No idea exists",
+			"status":  true,
+		})
+	}
+	return c.Status(fiber.StatusAccepted).JSON(&fiber.Map{
+		"data":   allideas,
+		"status": true,
 	})
 }
