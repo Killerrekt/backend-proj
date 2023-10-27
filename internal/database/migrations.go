@@ -17,6 +17,7 @@ func RunMigrations(db *gorm.DB) {
 	err_project := db.AutoMigrate(&models.Project{})
 	err_team := db.AutoMigrate(&models.Team{})
 	err_enquiry := db.AutoMigrate(&models.Enquiry{})
+	err_idea := db.AutoMigrate(&models.Idea{})
 
 	if err_invoice != nil {
 		fmt.Println("Could not migrate Invoice")
@@ -43,6 +44,10 @@ func RunMigrations(db *gorm.DB) {
 		return
 	}
 
+	if err_idea != nil {
+		fmt.Println("Could not migrate idea")
+		return
+	}
 	/*
 		err := db.AutoMigrate(&models.User{}, &models.RefreshToken{})
 		if err != nil {
