@@ -19,4 +19,5 @@ func UserRoutes(incomingRoutes *fiber.App) {
 	userRouter.Patch("/verifyuser", controller.VerifyUserOTP)
 	userRouter.Get("/me", middleware.VerifyAccessToken, controller.UserDashboard)
 	userRouter.Post("/resetpass", middleware.VerifyAccessToken, controller.ResetPassword)
+	userRouter.Patch("/update", middleware.VerifyAccessToken, controller.UpdateUser)
 }

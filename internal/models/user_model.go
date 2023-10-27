@@ -57,3 +57,15 @@ type UserProfile struct {
 	Country     string `json:"country"`
 	Team        Team   `json:"team"`
 }
+
+type UpdateUser struct {
+	FirstName   string `json:"first_name"    validate:"required"`
+	LastName    string `json:"last_name"     validate:"required"`
+	Gender      string `json:"gender"        validate:"required"`
+	DateOfBirth string `json:"date_of_birth" validate:"required"` // considering "YYYY/MM/DD format"
+	Bio         string `json:"bio"           validate:"required"`
+	PhoneNumber string `json:"phone_number"  validate:"required"`
+	College     string `json:"college"       validate:"required"`
+	Github      string `json:"github"        validate:"required"`
+	Country     string `json:"country"       validate:"required"`
+}
