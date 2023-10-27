@@ -1,8 +1,8 @@
 package controllers
 
 import (
-	"encoding/json"
 	"fmt"
+	"net/url"
 
 	"github.com/go-playground/validator/v10"
 	"github.com/gofiber/fiber/v2"
@@ -72,6 +72,16 @@ func CallBackURL(c *fiber.Ctx) error {
 
 func InitiatePayment(c *fiber.Ctx) error {
 	user := c.Locals("user").(models.User)
+
+	var existingInvoice models.Invoice
+	if err := database.DB.Where("user_id = ?", user.ID).First(&existingInvoice).Error; err == nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"message":     "Invoice for this user already exists.",
+			"status":      false,
+			"PaymentLink": "https://events.vit.ac.in/events/bolt/startPay/" + existingInvoice.RegistrationNo,
+		})
+	}
+
 	name := user.FirstName + " " + user.LastName
 	phoneNumber := user.PhoneNumber
 	email := user.Email
@@ -79,6 +89,7 @@ func InitiatePayment(c *fiber.Ctx) error {
 	currency_code := "USD"
 	amount := float32(1)
 	RegistrationNo, err := uuid.NewUUID()
+
 	if err != nil {
 		fmt.Println("Error generating UUID:", err)
 	}
@@ -107,38 +118,34 @@ func InitiatePayment(c *fiber.Ctx) error {
 		})
 	}
 
-	payload := fiber.Map{
-		"name":           string(name),
-		"mobileNo":       phoneNumber,
-		"email":          email,
-		"registrationNo": RegistrationNo,
-		"amount":         amount,
-		"currency_code":  currency_code,
-	}
+	values := url.Values{}
+	values.Set("name", name)
+	values.Set("mobileNo", phoneNumber)
+	values.Set("email", email)
+	values.Set("registrationNo", RegistrationNo.String())
+	values.Set("amount", fmt.Sprintf("%.2f", amount))
+	values.Set("currency_code", currency_code)
 
-	request := gorequest.New().Post("https://events.vit.ac.in/events/technext/cnfpay").Send(payload)
-	resp, body, errs := request.End()
+	request := gorequest.New().Post("https://events.vit.ac.in/events/bolt/cnfpay")
+	request.Type("form")
+	request.Send(values.Encode())
+	resp, _, errs := request.End()
 
-	if len(errs) > 0 {
+	if len(errs) > 0 || resp.StatusCode != fiber.StatusOK {
+		fmt.Println(errs)
+		if err := database.DB.Where("registration_no = ?", RegistrationNo.String()).Unscoped().Delete(&models.Invoice{}).Error; err != nil {
+			fmt.Println("Error deleting entry:", err)
+		}
+
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-			"status": false, "message": "Failed to make the request",
+			"status":  false,
+			"message": "Failed to make the request",
 		})
 	}
 
-	if resp.StatusCode == fiber.StatusOK {
-		var responseMap map[string]interface{}
-		if err := json.Unmarshal([]byte(body), &responseMap); err != nil {
-			fmt.Println("Error parsing response:", err)
-			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-				"status": false, "message": "Failed to parse response",
-			})
-		}
-		redirectURL := "https://events.vit.ac.in/events/technext/startPay/" + RegistrationNo.String()
-		return c.Redirect(redirectURL, fiber.StatusFound)
-	}
-
-	return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-		"status":  true,
-		"message": "POST request failed",
+	return c.Status(fiber.StatusOK).JSON(fiber.Map{
+		"status":      true,
+		"message":     "Invoice generated successfully.",
+		"PaymentLink": "https://events.vit.ac.in/events/bolt/startPay/" + RegistrationNo.String(),
 	})
 }
