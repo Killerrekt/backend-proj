@@ -60,3 +60,85 @@ func CreateIdea(c *fiber.Ctx) error {
 		"status":  true,
 	})
 }
+
+func UpdateIdea(c *fiber.Ctx) error {
+	var req struct {
+		FigmaLink string `json:"figma_link"`
+		DriveLink string `json:"drive_link"`
+		VideoLink string `json:"video_link"`
+	}
+
+	if err := c.BodyParser(&req); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(&fiber.Map{
+			"error":  "unable to parse the body",
+			"status": false,
+		})
+	}
+
+	user := c.Locals("user").(models.User)
+	var exists models.Idea
+	database.DB.Find(&exists, "team_id = ?", user.TeamID)
+	if exists.ID == 0 {
+		return c.Status(fiber.StatusBadRequest).JSON(&fiber.Map{
+			"error":  "No idea exist under this user(try create route)",
+			"status": false,
+		})
+	}
+
+	if req.FigmaLink != "" {
+		exists.FigmaLink = req.FigmaLink
+	}
+	if req.DriveLink != "" {
+		exists.DriveLink = req.DriveLink
+	}
+	if req.VideoLink != "" {
+		exists.VideoLink = req.VideoLink
+	}
+
+	if err := database.DB.Save(&exists); err.Error != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(&fiber.Map{
+			"error":  "something went wrong in updating",
+			"status": false,
+		})
+	}
+	return c.Status(fiber.StatusBadRequest).JSON(&fiber.Map{
+		"message": "idea updated",
+		"data":    exists,
+		"status":  true,
+	})
+}
+
+func DeleteIdea(c *fiber.Ctx) error {
+	user := c.Locals("user").(models.User)
+	var exist models.Idea
+	database.DB.Find(&exist, "team_id = ?", user.TeamID)
+	if exist.ID == 0 {
+		return c.Status(fiber.StatusBadRequest).JSON(&fiber.Map{
+			"error":  "No idea exists that can be deleted",
+			"status": false,
+		})
+	}
+	database.DB.Unscoped().Delete(&exist)
+	return c.Status(fiber.StatusAccepted).JSON(&fiber.Map{
+		"message": "Idea is deleted",
+		"status":  true,
+	})
+}
+
+func GetIdea(c *fiber.Ctx) error {
+	user := c.Locals("user").(models.User)
+	var exist models.Idea
+
+	database.DB.Find(&exist, "team_id = ?", user.TeamID)
+	if exist.ID == 0 {
+		return c.Status(fiber.StatusBadRequest).JSON(&fiber.Map{
+			"error":  "No idea exists",
+			"status": false,
+		})
+	}
+	return c.Status(fiber.StatusAccepted).JSON(&fiber.Map{
+		"message": "successfully fetched the data",
+		"data":    exist,
+		"status":  true,
+	})
+}

@@ -10,4 +10,7 @@ import (
 func IdeasRoutes(incomingRoutes *fiber.App) {
 	ideaRoutes := incomingRoutes.Group("/idea")
 	ideaRoutes.Post("/create", middleware.VerifyAccessToken, controllers.CreateIdea)
+	ideaRoutes.Post("/update", middleware.VerifyAccessToken, controllers.UpdateIdea)
+	ideaRoutes.Get("/get", middleware.VerifyAccessToken, controllers.GetIdea)
+	ideaRoutes.Delete("/delete", middleware.VerifyAccessToken, controllers.DeleteIdea)
 }
