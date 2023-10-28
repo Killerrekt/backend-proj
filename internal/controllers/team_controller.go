@@ -45,7 +45,7 @@ func CreateTeam(c *fiber.Ctx) error {
 
 	// Check if name exists
 	var existing models.Team
-	if err := database.DB.Where("name = ?", data.Name).First(&existing).Error; err != nil {
+	if err := database.DB.Find(&existing, "name = ?", data.Name); err.Error != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 			"status": false,
 			"error":  "A team with the same name already exists",
@@ -54,9 +54,10 @@ func CreateTeam(c *fiber.Ctx) error {
 
 	// Create team
 	team := models.Team{
-		Name:     data.Name,
-		TeamID:   uint(uuid.New().ID()), // Generate a hashed UUID
-		LeaderID: user.ID,
+		Name:         data.Name,
+		TeamID:       uint(uuid.New().ID()), // Generate a hashed UUID
+		LeaderID:     user.ID,
+		MembersCount: 1,
 	}
 
 	// Save
@@ -69,6 +70,7 @@ func CreateTeam(c *fiber.Ctx) error {
 
 	// Set as leader
 	user.IsLeader = true
+	user.TeamID = team.TeamID
 
 	if err := database.DB.Save(user).Error; err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
@@ -106,7 +108,7 @@ func JoinTeam(c *fiber.Ctx) error {
 
 	// Find team
 	var team models.Team
-	if err := database.DB.Where("team_code = ?", data.Code).Preload("Users").First(&team).Error; err != nil {
+	if err := database.DB.Find(&team, "team_id = ?", data.Code); err.Error != nil {
 		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
 			"status":  false,
 			"message": "invalid code",
@@ -120,12 +122,21 @@ func JoinTeam(c *fiber.Ctx) error {
 			"message": "team is full",
 		})
 	}
+	team.MembersCount = team.MembersCount + 1
+	user.TeamID = team.TeamID
 
 	// Save
 	if err := database.DB.Save(&team).Error; err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"status":  false,
 			"message": "Could not create team",
+		})
+	}
+
+	if err := database.DB.Save(&user); err.Error != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(&fiber.Map{
+			"status":  false,
+			"message": "could not save user team id",
 		})
 	}
 
@@ -139,9 +150,10 @@ func GetTeam(c *fiber.Ctx) error {
 
 	// Find team
 	var team models.Team
-	if err := database.DB.Preload("Users").First(&team, id).Error; err != nil {
+	if err := database.DB.Preload("Users").First(&team, "team_id = ?", id).Error; err != nil {
 		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
 			"message": "team not found",
+			"data":    team,
 		})
 	}
 
@@ -174,7 +186,7 @@ func UpdateTeam(c *fiber.Ctx) error {
 
 	// Find team
 	var team models.Team
-	if err := database.DB.First(&team, id).Error; err != nil {
+	if err := database.DB.Find(&team, "team_id = ?", id); err.Error != nil {
 		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
 			"message": "team not found",
 		})
@@ -201,7 +213,7 @@ func DeleteTeam(c *fiber.Ctx) error {
 
 	// Find team
 	var team models.Team
-	if err := database.DB.First(&team, id).Error; err != nil {
+	if err := database.DB.First(&team, "team_id = ?", id).Error; err != nil {
 		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
 			"status":  false,
 			"message": "team not found",
@@ -209,7 +221,7 @@ func DeleteTeam(c *fiber.Ctx) error {
 	}
 
 	// Delete team
-	if err := database.DB.Delete(&team).Error; err != nil {
+	if err := database.DB.Unscoped().Delete(&team).Error; err != nil {
 		log.Println(err.Error())
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"status":  false,
@@ -305,7 +317,7 @@ func GetLeaderInfo(c *fiber.Ctx) error {
 	id := c.Params("id")
 
 	var user models.User
-	if err := database.DB.First(&user, id).Error; err != nil {
+	if err := database.DB.Find(&user, "team_id = ?", id).Where("is_leader = true").Error; err != nil {
 		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
 			"status":  false,
 			"message": "Leader not found",
