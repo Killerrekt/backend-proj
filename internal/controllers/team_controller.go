@@ -23,7 +23,8 @@ func CreateTeam(c *fiber.Ctx) error {
 
 	if err := c.BodyParser(&data); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-			"status": false, "message": "error parsing JSON",
+			"status":  false,
+			"message": "error parsing JSON",
 		})
 	}
 
@@ -60,14 +61,20 @@ func CreateTeam(c *fiber.Ctx) error {
 
 	// Save
 	if err := database.DB.Create(&team).Error; err != nil {
-		return err
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"status":  false,
+			"message": "Could not create team",
+		})
 	}
 
 	// Set as leader
 	user.IsLeader = true
 
 	if err := database.DB.Save(user).Error; err != nil {
-		return err
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"status":  false,
+			"message": "Could not set user as leader",
+		})
 	}
 
 	return c.JSON(team)
@@ -134,7 +141,7 @@ func GetTeam(c *fiber.Ctx) error {
 	var team models.Team
 	if err := database.DB.Preload("Users").First(&team, id).Error; err != nil {
 		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
-			"error": "team not found",
+			"message": "team not found",
 		})
 	}
 
@@ -153,7 +160,8 @@ func UpdateTeam(c *fiber.Ctx) error {
 
 	if err := c.BodyParser(&data); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-			"status": false, "message": "error parsing JSON",
+			"status":  false,
+			"message": "error parsing JSON",
 		})
 	}
 
@@ -168,7 +176,7 @@ func UpdateTeam(c *fiber.Ctx) error {
 	var team models.Team
 	if err := database.DB.First(&team, id).Error; err != nil {
 		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
-			"error": "team not found",
+			"message": "team not found",
 		})
 	}
 
@@ -177,7 +185,10 @@ func UpdateTeam(c *fiber.Ctx) error {
 
 	// Save
 	if err := database.DB.Save(&team).Error; err != nil {
-		return err
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"status":  false,
+			"message": "Failed to save team",
+		})
 	}
 
 	return c.JSON(team)
@@ -192,8 +203,8 @@ func DeleteTeam(c *fiber.Ctx) error {
 	var team models.Team
 	if err := database.DB.First(&team, id).Error; err != nil {
 		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
-			"status": false,
-			"error":  "team not found",
+			"status":  false,
+			"message": "team not found",
 		})
 	}
 
@@ -273,4 +284,33 @@ func removeTeamFromMembers(teamID string) error {
 }
 
 // GET ALL TEAMS
+func GetAllTeams(c *fiber.Ctx) error {
+
+	var teams []models.Team
+
+	if err := database.DB.Find(&teams).Error; err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"status":  false,
+			"message": "Failed to get teams",
+		})
+	}
+
+	return c.JSON(teams)
+
+}
+
 // GET LEADER INFO
+func GetLeaderInfo(c *fiber.Ctx) error {
+
+	id := c.Params("id")
+
+	var user models.User
+	if err := database.DB.First(&user, id).Error; err != nil {
+		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
+			"status":  false,
+			"message": "Leader not found",
+		})
+	}
+	return c.JSON(user)
+
+}
