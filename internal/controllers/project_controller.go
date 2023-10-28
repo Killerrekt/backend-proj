@@ -43,7 +43,11 @@ func CreateProject(c *fiber.Ctx) error { // this will both create
 	}
 
 	var project models.Project
-	database.DB.Find(&project, "team_id = ?", user.TeamID) // maybe changed in future to ID instead of TeamID
+	database.DB.Find(
+		&project,
+		"team_id = ?",
+		user.TeamID,
+	) // maybe changed in future to ID instead of TeamID
 	if project.ID != 0 && project.IsFinal {
 		return c.Status(fiber.StatusForbidden).JSON(&fiber.Map{
 			"status": false,
@@ -266,7 +270,8 @@ func UpdateProject(c *fiber.Ctx) error {
 		"user":    user,
 		"data":    entry,
 	})
-}*/
+}
+*/
 
 func DBerrorHandling(err *gorm.DB) string {
 	if err.Error != nil {
