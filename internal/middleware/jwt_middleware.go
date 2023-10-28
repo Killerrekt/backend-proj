@@ -53,17 +53,23 @@ func VerifyAccessToken(c *fiber.Ctx) error {
 			})
 		}
 
-		if user.IsRoasted {
+		if user.IsBanned {
 			return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
-				"status": false, "message": "User is banned", "roasted": true,
+				"status": false, "message": "User is banned", "banned": true,
 			})
+		}
+
+		if !user.IsPaid {
+			return c.Status(fiber.StatusPaymentRequired).
+				JSON(fiber.Map{"status": false, "message": "User has not paid yet"})
 		}
 
 		c.Locals("user", user)
 		return c.Next()
 	}
 
-	return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"status": false, "message": "Invalid Token"})
+	return c.Status(fiber.StatusUnauthorized).
+		JSON(fiber.Map{"status": false, "message": "Invalid Token"})
 }
 
 func VerifyAdminToken(c *fiber.Ctx) error {
@@ -110,7 +116,7 @@ func VerifyAdminToken(c *fiber.Ctx) error {
 			})
 		}
 
-		if user.IsRoasted {
+		if user.IsBanned {
 			return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
 				"status": false, "message": "User is banned", "roasted": true,
 			})
@@ -120,7 +126,8 @@ func VerifyAdminToken(c *fiber.Ctx) error {
 		return c.Next()
 	}
 
-	return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"status": false, "message": "Invalid Token"})
+	return c.Status(fiber.StatusUnauthorized).
+		JSON(fiber.Map{"status": false, "message": "Invalid Token"})
 }
 
 func VerifyRefreshToken(c *fiber.Ctx) error {
@@ -182,5 +189,6 @@ func VerifyRefreshToken(c *fiber.Ctx) error {
 		return c.Next()
 	}
 
-	return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"status": false, "message": "Invalid Token"})
+	return c.Status(fiber.StatusUnauthorized).
+		JSON(fiber.Map{"status": false, "message": "Invalid Token"})
 }

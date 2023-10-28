@@ -14,5 +14,10 @@ func ProjectsRoutes(incomingRoutes *fiber.App) {
 	projectRoutes.Post("/create", middleware.VerifyAccessToken, controllers.CreateProject)
 	projectRoutes.Get("/get", middleware.VerifyAccessToken, controllers.GetProject)
 	projectRoutes.Delete("/delete", middleware.VerifyAccessToken, controllers.DeleteProject)
+<<<<<<< HEAD
 	// projectRoutes.Get("/getall", middleware.VerifyAccessToken, controllers.GetAllProject)
+=======
+	projectRoutes.Get("/getall", middleware.VerifyAdminToken, controllers.GetAllProject)
+	projectRoutes.Post("/update", middleware.VerifyAccessToken, controllers.UpdateProject)
+>>>>>>> 919f34b4797523e6af252a69b4a48588fd5be578
 }

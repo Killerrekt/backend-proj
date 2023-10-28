@@ -1,34 +1,30 @@
 package controllers
 
 import (
-	"encoding/json"
 	"fmt"
-	"math/rand"
+	"net/url"
 
 	"github.com/go-playground/validator/v10"
 	"github.com/gofiber/fiber/v2"
+	"github.com/google/uuid"
 
 	"github.com/parnurzeal/gorequest"
 	"www.github.com/ic-ETITE-24/icetite-24-backend/internal/database"
 	"www.github.com/ic-ETITE-24/icetite-24-backend/internal/models"
 )
 
-func generateUniqueRegistrationNo() int64 {
-	return int64(rand.Intn(9000000) + 1000000)
-}
-
 func CallBackURL(c *fiber.Ctx) error {
 	var request struct {
 		RegistrationNo  int64   `json:"registration_no" validate:"required"`
 		Token           string  `json:"token" validate:"required"`
 		IToken          string  `json:"itoken" validate:"required"`
-		TransactionId   int     `json:"transaction_id" validate:"required"`
+		TransactionID   int     `json:"transaction_id" validate:"required"`
 		PaymentStatus   bool    `json:"status" validate:"required"`
 		Amount          float32 `json:"amount" validate:"required"`
 		InvoiceNumber   int64   `json:"invoice_no" validate:"required"`
 		TransactionDate string  `json:"transaction_date" validate:"required"`
 		CurrencyCode    string  `json:"currency_code" validate:"required"`
-		UserId          int     `json:"user_id" validate:"required"`
+		UserID          uint    `json:"user_id" validate:"required"`
 	}
 
 	if err := c.BodyParser(&request); err != nil {
@@ -37,25 +33,24 @@ func CallBackURL(c *fiber.Ctx) error {
 		})
 	}
 
-	validator := validator.New()
-
-	if err := validator.Struct(request); err != nil {
+	validate := validator.New()
+	if err := validate.Struct(request); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 			"status": false, "message": "Please pass in all the fields",
 		})
 	}
 
 	var invoice models.Invoice
-	result := database.DB.Where("registration_no = ? AND user_id = ?", request.RegistrationNo, int(request.UserId)).First(&invoice)
+	result := database.DB.Where("registration_no = ? AND user_id = ?", request.RegistrationNo, request.UserID).First(&invoice)
 	if result.Error != nil {
 		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"status": false, "message": "Invoice not found"})
 	}
 
 	updates := models.Invoice{
-		UserId:          request.UserId,
+		UserID:          request.UserID,
 		IToken:          request.IToken,
 		Token:           request.Token,
-		TransactionId:   request.TransactionId,
+		TransactionId:   request.TransactionID,
 		PaymentStatus:   request.PaymentStatus,
 		Amount:          request.Amount,
 		InvoiceNumber:   request.InvoiceNumber,
@@ -77,24 +72,39 @@ func CallBackURL(c *fiber.Ctx) error {
 
 func InitiatePayment(c *fiber.Ctx) error {
 	user := c.Locals("user").(models.User)
+
+	var existingInvoice models.Invoice
+	if err := database.DB.Where("user_id = ?", user.ID).First(&existingInvoice).Error; err == nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"message":     "Invoice for this user already exists.",
+			"status":      false,
+			"PaymentLink": "https://events.vit.ac.in/events/bolt/startPay/" + existingInvoice.RegistrationNo,
+		})
+	}
+
 	name := user.FirstName + " " + user.LastName
 	phoneNumber := user.PhoneNumber
 	email := user.Email
 	country := user.Country
 	currency_code := "USD"
-	amount := float32(20)
-	RegistrationNo := generateUniqueRegistrationNo()
+	amount := float32(1)
+	RegistrationNo, err := uuid.NewUUID()
+
+	if err != nil {
+		fmt.Println("Error generating UUID:", err)
+	}
 
 	if country == "IN" {
-		amount = float32(599)
+		amount = float32(1)
 		currency_code = "INR"
 	}
 
 	invoice := models.Invoice{
-		UserId:          int(user.ID),
+		UserID:          user.ID,
 		IToken:          "null",
+		Token:           "null",
 		TransactionId:   0,
-		RegistrationNo:  RegistrationNo,
+		RegistrationNo:  RegistrationNo.String(),
 		PaymentStatus:   false,
 		Amount:          amount,
 		InvoiceNumber:   0,
@@ -108,50 +118,34 @@ func InitiatePayment(c *fiber.Ctx) error {
 		})
 	}
 
-	payload := fiber.Map{
-		"name":           string(name),
-		"mobileNo":       phoneNumber,
-		"email":          email,
-		"currency_code":  currency_code,
-		"amount":         amount,
-		"registrationNo": RegistrationNo,
-		"formSubmit":     "Submit",
-		"mobile_no":      phoneNumber,
-	}
+	values := url.Values{}
+	values.Set("name", name)
+	values.Set("mobileNo", phoneNumber)
+	values.Set("email", email)
+	values.Set("registrationNo", RegistrationNo.String())
+	values.Set("amount", fmt.Sprintf("%.2f", amount))
+	values.Set("currency_code", currency_code)
 
-	request := gorequest.New().Post("https://events.vit.ac.in/events/GRV23/cnfpay").Send(payload)
-	resp, body, errs := request.End()
+	request := gorequest.New().Post("https://events.vit.ac.in/events/bolt/cnfpay")
+	request.Type("form")
+	request.Send(values.Encode())
+	resp, _, errs := request.End()
 
-	if len(errs) > 0 {
+	if len(errs) > 0 || resp.StatusCode != fiber.StatusOK {
+		fmt.Println(errs)
+		if err := database.DB.Where("registration_no = ?", RegistrationNo.String()).Unscoped().Delete(&models.Invoice{}).Error; err != nil {
+			fmt.Println("Error deleting entry:", err)
+		}
+
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-			"status": false, "message": "Failed to make the request",
+			"status":  false,
+			"message": "Failed to make the request",
 		})
 	}
 
-	if resp.StatusCode == fiber.StatusOK {
-		var responseMap map[string]interface{}
-		if err := json.Unmarshal([]byte(body), &responseMap); err != nil {
-			fmt.Println("Error parsing response:", err)
-			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-				"status": false, "message": "Failed to parse response",
-			})
-		}
-
-		getURL := fmt.Sprintf("https://events.vit.ac.in/events/GRV23/startPay/%d", RegistrationNo)
-
-		getResponse, _, getErrs := gorequest.New().Get(getURL).End()
-
-		if len(getErrs) > 0 {
-			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-				"status": false, "message": "Failed to make GET request",
-			})
-		}
-
-		return c.SendString(fmt.Sprintf("Response from GET request: %v", getResponse))
-	}
-
-	return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-		"status":  true,
-		"message": "POST request failed",
+	return c.Status(fiber.StatusOK).JSON(fiber.Map{
+		"status":      true,
+		"message":     "Invoice generated successfully.",
+		"PaymentLink": "https://events.vit.ac.in/events/bolt/startPay/" + RegistrationNo.String(),
 	})
 }

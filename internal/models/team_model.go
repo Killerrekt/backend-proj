@@ -3,6 +3,7 @@ package models
 import "gorm.io/gorm"
 
 type Team struct {
+<<<<<<< HEAD
 	gorm.Model
 	Name string
 	// TeamCode string `gorm:"uniqueIndex"`
@@ -15,4 +16,10 @@ type Team struct {
 	TeamID       uint    `gorm:"primaryKey;unique"`
 	Users        []User  `gorm:"foreignKey:TeamID;references:TeamID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE"`
 	Project      Project `gorm:"foreignKey:TeamID;references:TeamID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE"`
+=======
+	TeamID  uint    `gorm:"primaryKey;unique"`
+	Users   []User  `gorm:"foreignKey:TeamID;references:TeamID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE"`
+	Project Project `gorm:"foreignKey:TeamID;references:TeamID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE"`
+	Idea    Idea    `gorm:"foreignKey:TeamID;references:TeamID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE"`
+>>>>>>> 919f34b4797523e6af252a69b4a48588fd5be578
 }
