@@ -2,9 +2,12 @@ package controllers
 
 import (
 	"errors"
+	"fmt"
 
 	"github.com/go-playground/validator/v10"
 	"github.com/gofiber/fiber/v2"
+	"gorm.io/gorm"
+
 	"www.github.com/ic-ETITE-24/icetite-24-backend/internal/database"
 	"www.github.com/ic-ETITE-24/icetite-24-backend/internal/models"
 )
@@ -41,7 +44,11 @@ func CreateProject(c *fiber.Ctx) error { // this will both create
 	}
 
 	var project models.Project
-	database.DB.Find(&project, "team_id = ?", user.TeamID) // maybe changed in future to ID instead of TeamID
+	database.DB.Find(
+		&project,
+		"team_id = ?",
+		user.TeamID,
+	) // maybe changed in future to ID instead of TeamID
 	if project.ID != 0 && project.IsFinal {
 		return c.Status(fiber.StatusForbidden).JSON(&fiber.Map{
 			"status": false,
@@ -85,7 +92,7 @@ func GetProject(c *fiber.Ctx) error {
 	var getproject models.Project
 
 	user := c.Locals("user").(models.User)
-	err := database.DB.Find(&getproject, "team_id = ?", user.TeamId)
+	err := database.DB.Find(&getproject, "team_id = ?", user.TeamID)
 	errstring := DBerrorHandling(err)
 	if errstring != "" {
 		return c.Status(fiber.StatusBadRequest).JSON(&fiber.Map{
@@ -157,7 +164,7 @@ func FinaliseProject(c *fiber.Ctx) error {
 		})
 	}
 	var project models.Project
-	database.DB.Find(&project, "team_id = ?", user.TeamId)
+	database.DB.Find(&project, "team_id = ?", user.TeamID)
 	if project.IsFinal {
 		return c.Status(fiber.StatusBadRequest).JSON(&fiber.Map{
 			"status": false,
@@ -265,6 +272,7 @@ func UpdateProject(c *fiber.Ctx) error {
 		"data":    entry,
 	})
 }
+*/
 
 func DBerrorHandling(err *gorm.DB) string {
 	if err.Error != nil {
