@@ -53,6 +53,7 @@ func main() {
 	routes.ProjectsRoutes(app)
 	routes.AdminRoutes(app)
 	routes.EnquiryRoutes(app)
+	routes.IdeasRoutes(app)
 
 	app.Use(func(c *fiber.Ctx) error {
 		return c.Status(404).JSON(fiber.Map{

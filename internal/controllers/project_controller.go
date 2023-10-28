@@ -109,6 +109,12 @@ func GetAllProject(c *fiber.Ctx) error {
 			"status": false,
 		})
 	}
+	if len(data) == 0 {
+		return c.Status(fiber.StatusAccepted).JSON(&fiber.Map{
+			"message": "No projects exists",
+			"status":  true,
+		})
+	}
 	return c.Status(fiber.StatusAccepted).JSON(&fiber.Map{
 		"data":   data,
 		"status": true,
