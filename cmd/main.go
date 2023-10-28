@@ -51,13 +51,10 @@ func main() {
 	routes.UserRoutes(app)
 	routes.PaymentRoutes(app)
 	routes.ProjectsRoutes(app)
-<<<<<<< HEAD
 	routes.TeamRoutes(app)
-=======
 	routes.AdminRoutes(app)
 	routes.EnquiryRoutes(app)
 	routes.IdeasRoutes(app)
->>>>>>> 919f34b4797523e6af252a69b4a48588fd5be578
 
 	app.Use(func(c *fiber.Ctx) error {
 		return c.Status(404).JSON(fiber.Map{

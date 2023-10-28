@@ -18,13 +18,8 @@ type User struct {
 	DateOfBirth  time.Time `json:"date_of_birth"`
 	Bio          string    `json:"bio"`
 	TeamID       uint      `json:"team_id"`
-<<<<<<< HEAD
-	IsLeader     bool      `json:"is_leader"`
-	IsApproved   bool      `json:"is_approved"`
-=======
 	IsLeader     bool      `json:"is_leader"     gorm:"default:false"`
 	IsApproved   bool      `json:"is_approved"   gorm:"default:false"`
->>>>>>> 919f34b4797523e6af252a69b4a48588fd5be578
 	IsVerified   bool      `json:"is_verified"   gorm:"default:false"`
 	IsBanned     bool      `json:"is_banned"     gorm:"default:false"`
 	IsPaid       bool      `json:"is_paid"       gorm:"default:false"`

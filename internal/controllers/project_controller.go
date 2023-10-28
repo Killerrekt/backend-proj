@@ -2,9 +2,11 @@ package controllers
 
 import (
 	"errors"
+	"fmt"
 
 	"github.com/go-playground/validator/v10"
 	"github.com/gofiber/fiber/v2"
+	"gorm.io/gorm"
 	"www.github.com/ic-ETITE-24/icetite-24-backend/internal/database"
 	"www.github.com/ic-ETITE-24/icetite-24-backend/internal/models"
 )
@@ -85,7 +87,7 @@ func GetProject(c *fiber.Ctx) error {
 	var getproject models.Project
 
 	user := c.Locals("user").(models.User)
-	err := database.DB.Find(&getproject, "team_id = ?", user.TeamId)
+	err := database.DB.Find(&getproject, "team_id = ?", user.TeamID)
 	errstring := DBerrorHandling(err)
 	if errstring != "" {
 		return c.Status(fiber.StatusBadRequest).JSON(&fiber.Map{
@@ -157,7 +159,7 @@ func FinaliseProject(c *fiber.Ctx) error {
 		})
 	}
 	var project models.Project
-	database.DB.Find(&project, "team_id = ?", user.TeamId)
+	database.DB.Find(&project, "team_id = ?", user.TeamID)
 	if project.IsFinal {
 		return c.Status(fiber.StatusBadRequest).JSON(&fiber.Map{
 			"status": false,
@@ -264,7 +266,7 @@ func UpdateProject(c *fiber.Ctx) error {
 		"user":    user,
 		"data":    entry,
 	})
-}
+}*/
 
 func DBerrorHandling(err *gorm.DB) string {
 	if err.Error != nil {
