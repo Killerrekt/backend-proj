@@ -11,7 +11,7 @@ import (
 func FindTeamByID(id uint) (models.Team, error) {
 	var team models.Team
 
-	result := database.DB.Where("id = ?", id).Preload("Users").First(&team)
+	result := database.DB.Where("team_id = ?", id).Preload("Users").Preload("Idea").Preload("Project").First(&team)
 	if result.Error != nil {
 		return models.Team{}, result.Error
 	}

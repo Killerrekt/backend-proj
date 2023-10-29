@@ -9,7 +9,6 @@ import (
 
 func ProjectsRoutes(incomingRoutes *fiber.App) {
 	projectRoutes := incomingRoutes.Group("/project")
-	projectRoutes.Post("/testing", middleware.VerifyAccessToken, controllers.CreateTeam)
 	projectRoutes.Post("/finalise", middleware.VerifyAccessToken, controllers.FinaliseProject)
 	projectRoutes.Post("/create", middleware.VerifyAccessToken, controllers.CreateProject)
 	projectRoutes.Get("/get", middleware.VerifyAccessToken, controllers.GetProject)
