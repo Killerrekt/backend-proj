@@ -46,7 +46,7 @@ func Login(c *fiber.Ctx) error {
 	if user.IsBanned {
 		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
 			"status": false, "message": "User is banned",
-			"verification_status": user.IsVerified, "roasted": true,
+			"verification_status": user.IsVerified, "banned": true,
 		})
 	}
 
@@ -54,7 +54,7 @@ func Login(c *fiber.Ctx) error {
 	if err != nil {
 		return c.Status(fiber.StatusConflict).JSON(fiber.Map{
 			"status": false, "message": "invalid password",
-			"verification_status": user.IsVerified, "roasted": false,
+			"verification_status": user.IsVerified, "banned": false,
 		})
 	}
 
@@ -62,7 +62,7 @@ func Login(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusUnauthorized).
 			JSON(fiber.Map{
 				"status": false, "message": "User is not verified",
-				"verification_status": false, "roasted": false,
+				"verification_status": false, "banned": false,
 			})
 	}
 
@@ -106,7 +106,7 @@ func Login(c *fiber.Ctx) error {
 	return c.Status(fiber.StatusOK).
 		JSON(fiber.Map{
 			"status": true, "message": "Login Successful", "access_token": accessToken,
-			"refresh_token": refreshToken, "verification_status": user.IsVerified, "payment_status": user.IsPaid, "roasted": false,
+			"refresh_token": refreshToken, "verification_status": user.IsVerified, "payment_status": user.IsPaid, "banned": false,
 		})
 }
 
