@@ -7,6 +7,7 @@ import (
 	"github.com/gofiber/fiber/v2"
 	"github.com/google/uuid"
 	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 
 	"www.github.com/ic-ETITE-24/icetite-24-backend/internal/database"
 	"www.github.com/ic-ETITE-24/icetite-24-backend/internal/models"
@@ -142,7 +143,7 @@ func GetTeam(c *fiber.Ctx) error {
 	id := user.TeamID
 
 	var team models.Team
-	if err := database.DB.Preload("Users").Preload("Idea").Preload("Project").First(&team, "team_id = ?", id).Error; err != nil {
+	if err := database.DB.Preload(clause.Associations).First(&team, "team_id = ?", id).Error; err != nil {
 		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
 			"message": "team not found",
 			"data":    team,
@@ -223,7 +224,7 @@ func DeleteTeam(c *fiber.Ctx) error {
 func GetAllTeams(c *fiber.Ctx) error {
 	var teams []models.Team
 
-	if err := database.DB.Preload("User").Preload("Idea").Preload("Project").Find(&teams).Error; err != nil {
+	if err := database.DB.Preload(clause.Associations).Find(&teams).Error; err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"status":  false,
 			"message": "Failed to get teams",

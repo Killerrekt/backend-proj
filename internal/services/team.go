@@ -3,6 +3,7 @@ package services
 import (
 	"fmt"
 
+	"gorm.io/gorm/clause"
 	"www.github.com/ic-ETITE-24/icetite-24-backend/internal/database"
 	"www.github.com/ic-ETITE-24/icetite-24-backend/internal/models"
 	"www.github.com/ic-ETITE-24/icetite-24-backend/internal/utils"
@@ -11,7 +12,7 @@ import (
 func FindTeamByID(id uint) (models.Team, error) {
 	var team models.Team
 
-	result := database.DB.Where("team_id = ?", id).Preload("Users").Preload("Idea").Preload("Project").First(&team)
+	result := database.DB.Where("team_id = ?", id).Preload(clause.Associations).First(&team)
 	if result.Error != nil {
 		return models.Team{}, result.Error
 	}
