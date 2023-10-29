@@ -1,6 +1,7 @@
 package controllers
 
 import (
+	"errors"
 	"fmt"
 	"log"
 	"math/rand"
@@ -68,7 +69,7 @@ func CreateUser(c *fiber.Ctx) error {
 	return c.Status(fiber.StatusOK).
 		JSON(fiber.Map{
 			"status": true, "message": "Successfully created user",
-			"verification_status": false, "roasted": false,
+			"verification_status": false, "banned": false,
 		})
 }
 
@@ -219,7 +220,7 @@ func SendForgotPasswordOTP(c *fiber.Ctx) error {
 
 	_, err := services.FindUserByEmail(request.Email)
 	if err != nil {
-		if err == gorm.ErrRecordNotFound {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
 				"status": false, "message": "User not found",
 			})
@@ -227,7 +228,7 @@ func SendForgotPasswordOTP(c *fiber.Ctx) error {
 
 		log.Println(err.Error())
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-			"status": false, "message": "Some error occured",
+			"status": false, "message": "Some error occurred",
 		})
 	}
 
@@ -270,7 +271,7 @@ func VerifyForgotPasswordOTP(c *fiber.Ctx) error {
 
 	user, err := services.FindUserByEmail(request.Email)
 	if err != nil {
-		if err == gorm.ErrRecordNotFound {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
 				"status": false, "message": "User not found",
 			})
@@ -278,7 +279,7 @@ func VerifyForgotPasswordOTP(c *fiber.Ctx) error {
 
 		log.Println(err.Error())
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-			"status": false, "message": "Some error occured",
+			"status": false, "message": "Some error occurred",
 		})
 	}
 
@@ -298,7 +299,7 @@ func VerifyForgotPasswordOTP(c *fiber.Ctx) error {
 	hashed, err := bcrypt.GenerateFromPassword([]byte(request.NewPassword), 10)
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).
-			JSON(fiber.Map{"status": false, "message": "Some error occured while hashing"})
+			JSON(fiber.Map{"status": false, "message": "Some error occurred while hashing"})
 	}
 
 	user.Password = string(hashed)
@@ -330,7 +331,7 @@ func SendVerifyUserOTP(c *fiber.Ctx) error {
 
 	user, err := services.FindUserByEmail(request.Email)
 	if err != nil {
-		if err == gorm.ErrRecordNotFound {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
 				"status": false, "message": "User not found",
 			})
@@ -338,7 +339,7 @@ func SendVerifyUserOTP(c *fiber.Ctx) error {
 
 		log.Println(err.Error())
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-			"status": false, "message": "Some error occured",
+			"status": false, "message": "Some error occurred",
 		})
 	}
 
@@ -350,7 +351,7 @@ func SendVerifyUserOTP(c *fiber.Ctx) error {
 	if err := database.RedisClient.Set(fmt.Sprintf("verification_otp:%s", request.Email),
 		fmt.Sprint(otp), time.Minute*10); err != nil {
 		return c.Status(fiber.StatusInternalServerError).
-			JSON(fiber.Map{"status": false, "message": "Some error occured"})
+			JSON(fiber.Map{"status": false, "message": "Some error occurred"})
 	}
 
 	body := fmt.Sprintf("You otp for verification is: %d", otp)
@@ -387,7 +388,7 @@ func VerifyUserOTP(c *fiber.Ctx) error {
 
 	user, err := services.FindUserByEmail(request.Email)
 	if err != nil {
-		if err == gorm.ErrRecordNotFound {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
 				"status": false, "message": "User not found",
 			})
@@ -395,7 +396,7 @@ func VerifyUserOTP(c *fiber.Ctx) error {
 
 		log.Println(err.Error())
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-			"status": false, "message": "Some error occured",
+			"status": false, "message": "Some error occurred",
 		})
 	}
 
@@ -430,7 +431,7 @@ func BanUser(c *fiber.Ctx) error {
 
 	user, err := services.FindUserByID(uint(userID))
 	if err != nil {
-		if err == gorm.ErrRecordNotFound {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
 				"status": false, "message": "User not found",
 			})
@@ -444,7 +445,7 @@ func BanUser(c *fiber.Ctx) error {
 	user.IsBanned = true
 	database.DB.Save(&user)
 
-	return c.Status(fiber.StatusOK).JSON(fiber.Map{"status": true, "message": "User roasted"})
+	return c.Status(fiber.StatusOK).JSON(fiber.Map{"status": true, "message": "User banned"})
 }
 
 func UnbanUser(c *fiber.Ctx) error {
@@ -459,7 +460,7 @@ func UnbanUser(c *fiber.Ctx) error {
 
 	user, err := services.FindUserByID(uint(userID))
 	if err != nil {
-		if err == gorm.ErrRecordNotFound {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
 				"status": false, "message": "User not found",
 			})
@@ -473,7 +474,7 @@ func UnbanUser(c *fiber.Ctx) error {
 	user.IsBanned = false
 	database.DB.Save(&user)
 
-	return c.Status(fiber.StatusOK).JSON(fiber.Map{"status": true, "message": "User roast revoked"})
+	return c.Status(fiber.StatusOK).JSON(fiber.Map{"status": true, "message": "User ban revoked"})
 }
 
 func ResetPassword(c *fiber.Ctx) error {
@@ -595,4 +596,24 @@ func UpdateUser(c *fiber.Ctx) error {
 
 	return c.Status(fiber.StatusOK).
 		JSON(fiber.Map{"status": true, "message": "User updated successfully"})
+}
+
+func DeleteUser(c *fiber.Ctx) error {
+	user := c.Locals("user").(models.User)
+
+	if user.IsLeader {
+		err := services.DeleteTeamByID(user.TeamID)
+		if err != nil {
+			log.Println(err.Error())
+			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"status": false, "message": "Some error occurred"})
+		}
+	}
+
+	if err := database.DB.Unscoped().Delete(&user).Error; err != nil {
+		return c.Status(fiber.StatusInternalServerError).
+			JSON(fiber.Map{"status": false, "message": "Some error occurred", "error": err.Error()})
+	}
+
+	return c.Status(fiber.StatusOK).
+		JSON(fiber.Map{"status": true, "message": "User deleted successfully"})
 }

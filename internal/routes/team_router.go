@@ -14,6 +14,5 @@ func TeamRoutes(app *fiber.App) {
 	teamRoutes.Get("/:id", middleware.VerifyAccessToken, controllers.GetTeam)
 	teamRoutes.Put("/:id", middleware.VerifyAccessToken, controllers.UpdateTeam)
 	teamRoutes.Delete("/:id", middleware.VerifyAccessToken, controllers.DeleteTeam)
-	teamRoutes.Get("/", middleware.VerifyAccessToken, controllers.GetAllTeams)
-	teamRoutes.Get("/leaders/:id", middleware.VerifyAccessToken, controllers.GetLeaderInfo)
+	teamRoutes.Get("/leave", middleware.VerifyAccessToken, controllers.LeaveTeam)
 }
