@@ -17,7 +17,7 @@ type Project struct {
 	TeamID       uint   `json:"teamID"`
 }
 
-type CreateProject struct {
+type UpdateProject struct {
 	// Name         string `json:"name"`
 	Desc       string `json:"desc"`
 	Githublink string `json:"github"`

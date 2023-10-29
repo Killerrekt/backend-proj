@@ -138,10 +138,11 @@ func JoinTeam(c *fiber.Ctx) error {
 }
 
 func GetTeam(c *fiber.Ctx) error {
-	id := c.Params("id")
+	user := c.Locals("user").(models.User)
+	id := user.TeamID
 
 	var team models.Team
-	if err := database.DB.Preload("Users").First(&team, "team_id = ?", id).Error; err != nil {
+	if err := database.DB.Preload("Users").Preload("Idea").Preload("Project").First(&team, "team_id = ?", id).Error; err != nil {
 		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
 			"message": "team not found",
 			"data":    team,
@@ -152,7 +153,8 @@ func GetTeam(c *fiber.Ctx) error {
 }
 
 func UpdateTeam(c *fiber.Ctx) error {
-	id := c.Params("id")
+	user := c.Locals("user").(models.User)
+	id := user.TeamID
 
 	var data struct {
 		Name string `json:"name"`
@@ -194,14 +196,23 @@ func UpdateTeam(c *fiber.Ctx) error {
 }
 
 func DeleteTeam(c *fiber.Ctx) error {
-	idStr := c.Params("id")
 
-	id, err := strconv.Atoi(idStr)
+	user := c.Locals("user").(models.User)
+	id := user.TeamID
+
+	/*id, err := strconv.Atoi(idStr)
 	if err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"status": false, "message": "please give a valid ID"})
-	}
+	}*/
 
-	err = services.DeleteTeamByID(uint(id))
+	/*err := */
+	if !user.IsLeader {
+		return c.Status(fiber.StatusBadRequest).JSON(&fiber.Map{
+			"error":  "user is not a leader",
+			"status": false,
+		})
+	}
+	services.DeleteTeamByID(uint(id))
 
 	return c.JSON(fiber.Map{
 		"status":  true,
@@ -212,7 +223,7 @@ func DeleteTeam(c *fiber.Ctx) error {
 func GetAllTeams(c *fiber.Ctx) error {
 	var teams []models.Team
 
-	if err := database.DB.Preload("User").Find(&teams).Error; err != nil {
+	if err := database.DB.Preload("User").Preload("Idea").Preload("Project").Find(&teams).Error; err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"status":  false,
 			"message": "Failed to get teams",
@@ -275,7 +286,7 @@ func GetIdeaFromTeamID(c *fiber.Ctx) error {
 func LeaveTeam(c *fiber.Ctx) error {
 	user := c.Locals("user").(models.User)
 
-	if user.TeamID != 0 {
+	if user.TeamID == 0 {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"status": false, "message": "User not part of any team"})
 	}
 

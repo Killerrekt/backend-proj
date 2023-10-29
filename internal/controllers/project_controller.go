@@ -64,16 +64,12 @@ func CreateProject(c *fiber.Ctx) error { // this will both create
 		})
 	}
 	createproject.IsFinal = false
+	createproject.TeamID = user.TeamID
 
 	var errstring string
 
-	if project.ID == 0 {
-		err := database.DB.Create(&createproject)
-		errstring = DBerrorHandling(err)
-	} else {
-		err := database.DB.Model(&project).Updates(&createproject)
-		errstring = DBerrorHandling(err)
-	}
+	dberr := database.DB.Create(&createproject)
+	errstring = DBerrorHandling(dberr)
 	if errstring != "" {
 		return c.Status(fiber.StatusBadRequest).JSON(&fiber.Map{
 			"error":  errstring,
@@ -83,7 +79,7 @@ func CreateProject(c *fiber.Ctx) error { // this will both create
 	return c.Status(fiber.StatusAccepted).JSON(&fiber.Map{
 		"status":  true,
 		"message": "project have been created",
-		"data":    project,
+		"data":    createproject,
 	})
 }
 
@@ -179,7 +175,7 @@ func FinaliseProject(c *fiber.Ctx) error {
 }
 
 func UpdateProject(c *fiber.Ctx) error {
-	var updateproject models.CreateProject
+	var updateproject models.UpdateProject
 
 	user := c.Locals("user").(models.User)
 
@@ -236,8 +232,9 @@ func UpdateProject(c *fiber.Ctx) error {
 	}
 
 	return c.Status(fiber.StatusAccepted).JSON(&fiber.Map{
-		"data":   currproject,
-		"status": true,
+		"data":    currproject,
+		"message": "Project updated successful",
+		"status":  true,
 	})
 }
 
