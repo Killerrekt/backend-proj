@@ -1,8 +1,6 @@
 package utils
 
 import (
-	"crypto/tls"
-
 	"github.com/spf13/viper"
 	"gopkg.in/gomail.v2"
 )
@@ -15,7 +13,7 @@ func SendMail(subject, body, to string) error {
 	msg.SetBody("text/plain", body)
 
 	dialer := gomail.NewDialer("smtp.gmail.com", 587, viper.GetString("SENDER_MAIL"), viper.GetString("SENDER_PASS"))
-	dialer.TLSConfig = &tls.Config{InsecureSkipVerify: true} //need to be check later
+	//dialer.TLSConfig = &tls.Config{InsecureSkipVerify: true} //need to be check later
 
 	if err := dialer.DialAndSend(msg); err != nil {
 		return err
