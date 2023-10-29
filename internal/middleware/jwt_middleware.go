@@ -118,7 +118,7 @@ func VerifyAdminToken(c *fiber.Ctx) error {
 
 		if user.IsBanned {
 			return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
-				"status": false, "message": "User is banned", "roasted": true,
+				"status": false, "message": "User is banned", "banned": true,
 			})
 		}
 

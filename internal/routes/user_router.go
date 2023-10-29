@@ -15,9 +15,10 @@ func UserRoutes(incomingRoutes *fiber.App) {
 	userRouter.Get("/logout", controller.Logout)
 	userRouter.Post("/forgot", controller.SendForgotPasswordOTP)
 	userRouter.Patch("/forgot", controller.VerifyForgotPasswordOTP)
-	userRouter.Post("/verifyuser", controller.SendVerifyUserOTP)
-	userRouter.Patch("/verifyuser", controller.VerifyUserOTP)
+	userRouter.Post("/verify", controller.SendVerifyUserOTP)
+	userRouter.Patch("/verify", controller.VerifyUserOTP)
 	userRouter.Get("/me", middleware.VerifyAccessToken, controller.UserDashboard)
-	userRouter.Post("/resetpass", middleware.VerifyAccessToken, controller.ResetPassword)
+	userRouter.Post("/reset-pass", middleware.VerifyAccessToken, controller.ResetPassword)
 	userRouter.Patch("/update", middleware.VerifyAccessToken, controller.UpdateUser)
+	userRouter.Delete("/delete", middleware.VerifyAccessToken, controller.DeleteUser)
 }

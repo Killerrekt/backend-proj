@@ -10,10 +10,10 @@ func AdminRoutes(incomingRoutes *fiber.App) {
 	adminRouter := incomingRoutes.Group("/admin")
 	adminRouter.Use(middleware.VerifyAdminToken)
 
-	adminRouter.Get("/get-all", controller.GetAllUsers)
+	adminRouter.Get("/users", controller.GetAllUsers)
 	adminRouter.Get("/team/project/:id", controller.GetProjectFromTeamID)
 	adminRouter.Get("/team/idea/:id", controller.GetIdeaFromTeamID)
-	adminRouter.Get("/team", controller.GetAllTeams)
+	adminRouter.Get("/teams", controller.GetAllTeams)
 	adminRouter.Get("/team/user/:id", controller.GetLeaderInfo)
 	adminRouter.Post("/ban/:id", controller.BanUser)
 	adminRouter.Post("/unban/:id", controller.UnbanUser)
