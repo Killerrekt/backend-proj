@@ -2,6 +2,7 @@ package services
 
 import (
 	"fmt"
+
 	"www.github.com/ic-ETITE-24/icetite-24-backend/internal/database"
 	"www.github.com/ic-ETITE-24/icetite-24-backend/internal/models"
 	"www.github.com/ic-ETITE-24/icetite-24-backend/internal/utils"
@@ -56,7 +57,11 @@ func DeleteTeamByID(id uint) error {
 			return err
 		}
 
-		err := utils.SendMail("Team Deleted", fmt.Sprintf("The team %s has been deleted", result.Name), user.Email)
+		err := utils.SendMail(
+			"Team Deleted",
+			fmt.Sprintf("The team %s has been deleted", result.Name),
+			user.Email,
+		)
 		if err != nil {
 			return err
 		}
