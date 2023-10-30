@@ -59,10 +59,10 @@ func VerifyAccessToken(c *fiber.Ctx) error {
 			})
 		}
 
-		if !user.IsPaid {
-			return c.Status(fiber.StatusPaymentRequired).
-				JSON(fiber.Map{"status": false, "message": "User has not paid yet"})
-		}
+		// if !user.IsPaid {
+		// 	return c.Status(fiber.StatusPaymentRequired).
+		// 		JSON(fiber.Map{"status": false, "message": "User has not paid yet"})
+		// }
 
 		c.Locals("user", user)
 		return c.Next()
