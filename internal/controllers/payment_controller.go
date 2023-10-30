@@ -2,6 +2,7 @@ package controllers
 
 import (
 	"fmt"
+	"log"
 	"math/rand"
 	"net/url"
 	"strconv"
@@ -13,6 +14,7 @@ import (
 	"github.com/parnurzeal/gorequest"
 	"www.github.com/ic-ETITE-24/icetite-24-backend/internal/database"
 	"www.github.com/ic-ETITE-24/icetite-24-backend/internal/models"
+	"www.github.com/ic-ETITE-24/icetite-24-backend/internal/services"
 )
 
 func abs(n int64) int64 {
@@ -87,6 +89,21 @@ func CallBackURL(c *fiber.Ctx) error {
 			"status": false, "message": "Failed to update invoice",
 		})
 	}
+
+	user, err := services.FindUserByID(invoice.UserID)
+	if err != nil {
+		log.Println(err.Error())
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"status":  false,
+			"message": "Some error occured",
+		})
+	}
+
+	if invoice.PaymentStatus == 2 && request.PaymentStatus == 2 {
+		user.IsPaid = true
+	}
+
+	database.DB.Save(&user)
 
 	return c.Status(fiber.StatusOK).JSON(fiber.Map{
 		"status":  true,
