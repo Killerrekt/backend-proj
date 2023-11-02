@@ -2,34 +2,54 @@ package controllers
 
 import (
 	"fmt"
+	"log"
+	"math/rand"
 	"net/url"
+	"strconv"
+	"time"
 
 	"github.com/go-playground/validator/v10"
 	"github.com/gofiber/fiber/v2"
-	"github.com/google/uuid"
 
 	"github.com/parnurzeal/gorequest"
 	"www.github.com/ic-ETITE-24/icetite-24-backend/internal/database"
 	"www.github.com/ic-ETITE-24/icetite-24-backend/internal/models"
+	"www.github.com/ic-ETITE-24/icetite-24-backend/internal/services"
 )
+
+func abs(n int64) int64 {
+	if n < 0 {
+		return -n
+	}
+	return n
+}
+
+func generateUniqueRegistrationNo() string {
+	timestamp := time.Now().UnixNano()
+	rand.Seed(time.Now().UnixNano())
+	randomNum := rand.Intn(10000000000)
+	registrationNo := timestamp*10000000000 + int64(randomNum)
+	registrationNo = abs(registrationNo)
+	return strconv.FormatInt(registrationNo, 10)
+}
 
 func CallBackURL(c *fiber.Ctx) error {
 	var request struct {
-		RegistrationNo  int64   `json:"registration_no" validate:"required"`
-		Token           string  `json:"token" validate:"required"`
-		IToken          string  `json:"itoken" validate:"required"`
-		TransactionID   int     `json:"transaction_id" validate:"required"`
-		PaymentStatus   bool    `json:"status" validate:"required"`
-		Amount          float32 `json:"amount" validate:"required"`
-		InvoiceNumber   int64   `json:"invoice_no" validate:"required"`
-		TransactionDate string  `json:"transaction_date" validate:"required"`
-		CurrencyCode    string  `json:"currency_code" validate:"required"`
-		UserID          uint    `json:"user_id" validate:"required"`
+		RegistrationNo  string  `form:"referenceNo" validate:"required"`
+		Token           string  `form:"token" validate:"required"`
+		IToken          string  `form:"itoken" validate:"required"`
+		TransactionID   string  `form:"transactionId" validate:"required"`
+		PaymentStatus   int     `form:"status" validate:"required"`
+		Amount          float32 `form:"amount" validate:"required"`
+		InvoiceNumber   string  `form:"invoiceNo" validate:"required"`
+		TransactionDate string  `form:"transactionDate" validate:"required"`
+		// CurrencyCode    string  `form:"currency_code" validate:"required"`
+		// UserID          uint    `form:"user_id" validate:"required"`
 	}
 
 	if err := c.BodyParser(&request); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-			"status": false, "message": "Could not process JSON",
+			"status": false, "message": "Could not process form data",
 		})
 	}
 
@@ -41,21 +61,27 @@ func CallBackURL(c *fiber.Ctx) error {
 	}
 
 	var invoice models.Invoice
-	result := database.DB.Where("registration_no = ? AND user_id = ?", request.RegistrationNo, request.UserID).First(&invoice)
+	result := database.DB.Where("registration_no = ? ", request.RegistrationNo).First(&invoice)
+
 	if result.Error != nil {
 		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"status": false, "message": "Invoice not found"})
 	}
 
+	if invoice.PaymentStatus == 2 {
+		return c.Status(fiber.StatusForbidden).JSON(fiber.Map{"status": false, "message": "Invoice already paid"})
+	}
+
+	if invoice.Amount != request.Amount {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"status": false, "message": "Invalid details"})
+	}
+
 	updates := models.Invoice{
-		UserID:          request.UserID,
 		IToken:          request.IToken,
 		Token:           request.Token,
 		TransactionId:   request.TransactionID,
 		PaymentStatus:   request.PaymentStatus,
-		Amount:          request.Amount,
 		InvoiceNumber:   request.InvoiceNumber,
 		TransactionDate: request.TransactionDate,
-		CurrencyCode:    request.CurrencyCode,
 	}
 
 	if err := database.DB.Model(&invoice).Updates(updates).Error; err != nil {
@@ -63,6 +89,21 @@ func CallBackURL(c *fiber.Ctx) error {
 			"status": false, "message": "Failed to update invoice",
 		})
 	}
+
+	user, err := services.FindUserByID(invoice.UserID)
+	if err != nil {
+		log.Println(err.Error())
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"status":  false,
+			"message": "Some error occured",
+		})
+	}
+
+	if invoice.PaymentStatus == 2 && request.PaymentStatus == 2 {
+		user.IsPaid = true
+	}
+
+	database.DB.Save(&user)
 
 	return c.Status(fiber.StatusOK).JSON(fiber.Map{
 		"status":  true,
@@ -88,11 +129,7 @@ func InitiatePayment(c *fiber.Ctx) error {
 	country := user.Country
 	currency_code := "USD"
 	amount := float32(1)
-	RegistrationNo, err := uuid.NewUUID()
-
-	if err != nil {
-		fmt.Println("Error generating UUID:", err)
-	}
+	RegistrationNo := generateUniqueRegistrationNo()
 
 	if country == "IN" {
 		amount = float32(1)
@@ -103,11 +140,11 @@ func InitiatePayment(c *fiber.Ctx) error {
 		UserID:          user.ID,
 		IToken:          "null",
 		Token:           "null",
-		TransactionId:   0,
-		RegistrationNo:  RegistrationNo.String(),
-		PaymentStatus:   false,
+		TransactionId:   "null",
+		RegistrationNo:  RegistrationNo,
+		PaymentStatus:   0,
 		Amount:          amount,
-		InvoiceNumber:   0,
+		InvoiceNumber:   "null",
 		TransactionDate: "0",
 		CurrencyCode:    currency_code,
 	}
@@ -122,7 +159,7 @@ func InitiatePayment(c *fiber.Ctx) error {
 	values.Set("name", name)
 	values.Set("mobileNo", phoneNumber)
 	values.Set("email", email)
-	values.Set("registrationNo", RegistrationNo.String())
+	values.Set("registrationNo", RegistrationNo)
 	values.Set("amount", fmt.Sprintf("%.2f", amount))
 	values.Set("currency_code", currency_code)
 
@@ -133,7 +170,7 @@ func InitiatePayment(c *fiber.Ctx) error {
 
 	if len(errs) > 0 || resp.StatusCode != fiber.StatusOK {
 		fmt.Println(errs)
-		if err := database.DB.Where("registration_no = ?", RegistrationNo.String()).Unscoped().Delete(&models.Invoice{}).Error; err != nil {
+		if err := database.DB.Where("registration_no = ?", RegistrationNo).Unscoped().Delete(&models.Invoice{}).Error; err != nil {
 			fmt.Println("Error deleting entry:", err)
 		}
 
@@ -146,6 +183,6 @@ func InitiatePayment(c *fiber.Ctx) error {
 	return c.Status(fiber.StatusOK).JSON(fiber.Map{
 		"status":      true,
 		"message":     "Invoice generated successfully.",
-		"PaymentLink": "https://events.vit.ac.in/events/bolt/startPay/" + RegistrationNo.String(),
+		"PaymentLink": "https://events.vit.ac.in/events/bolt/startPay/" + RegistrationNo,
 	})
 }

@@ -103,10 +103,16 @@ func Login(c *fiber.Ctx) error {
 			JSON(fiber.Map{"status": false, "message": "Some error occured"})
 	}
 
+	inTeam := false
+	if user.TeamID != 0 {
+		inTeam = true
+	}
+
 	return c.Status(fiber.StatusOK).
 		JSON(fiber.Map{
 			"status": true, "message": "Login Successful", "access_token": accessToken,
-			"refresh_token": refreshToken, "verification_status": user.IsVerified, "payment_status": user.IsPaid, "banned": false,
+			"refresh_token": refreshToken, "verification_status": user.IsVerified,
+			"payment_status": user.IsPaid, "banned": false, "in_team": inTeam,
 		})
 }
 
