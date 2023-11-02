@@ -6,6 +6,7 @@ import (
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/cors"
 	"github.com/gofiber/fiber/v2/middleware/logger"
+	"github.com/gofiber/fiber/v2/middleware/recover"
 
 	"www.github.com/ic-ETITE-24/icetite-24-backend/config"
 	"www.github.com/ic-ETITE-24/icetite-24-backend/internal/database"
@@ -36,10 +37,12 @@ func main() {
 
 	app.Use(cors.New(cors.Config{
 		AllowOrigins:     config.ClientOrigin,
-		AllowHeaders:     "Origin, Content-Type, Accept , Authorization",
+		AllowHeaders:     "Origin, Content-Type, Accept, Authorization",
 		AllowMethods:     "GET, POST, PATCH, DELETE",
 		AllowCredentials: true,
 	}))
+
+	app.Use(recover.New())
 
 	app.Get("/ping", func(c *fiber.Ctx) error {
 		return c.Status(200).JSON(fiber.Map{

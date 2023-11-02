@@ -16,7 +16,7 @@ import (
 )
 
 func VerifyAccessToken(c *fiber.Ctx) error {
-	tokenString := c.Get("Authorization")
+	tokenString := c.Get("Authorization", "")
 
 	if tokenString == "" {
 		return c.Status(fiber.StatusUnauthorized).
@@ -28,7 +28,20 @@ func VerifyAccessToken(c *fiber.Ctx) error {
 			JSON(fiber.Map{"status": false, "message": "Invalid Authorization Header Format"})
 	}
 
-	token := strings.TrimPrefix(tokenString, "Bearer ")
+	fields := strings.Fields(tokenString)
+
+	var token string
+	if len(fields) > 1 && fields[0] == "Bearer" {
+		token = fields[1]
+	}
+
+	if token == "" {
+		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"status": false, "message": "You are not logged in"})
+	}
+
+	if token == "undefined" {
+		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"status": false, "message": "Please send a valid token"})
+	}
 
 	accessToken, _ := jwt.Parse(token, func(token *jwt.Token) (interface{}, error) {
 		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
@@ -59,10 +72,10 @@ func VerifyAccessToken(c *fiber.Ctx) error {
 			})
 		}
 
-		// if !user.IsPaid {
-		// 	return c.Status(fiber.StatusPaymentRequired).
-		// 		JSON(fiber.Map{"status": false, "message": "User has not paid yet"})
-		// }
+		if !user.IsPaid {
+			return c.Status(fiber.StatusPaymentRequired).
+				JSON(fiber.Map{"status": false, "message": "User has not paid yet"})
+		}
 
 		c.Locals("user", user)
 		return c.Next()
