@@ -22,7 +22,7 @@ type User struct {
 	IsApproved   bool      `json:"is_approved"   gorm:"default:false"`
 	IsVerified   bool      `json:"is_verified"   gorm:"default:false"`
 	IsBanned     bool      `json:"is_banned"     gorm:"default:false"`
-	IsPaid       bool      `json:"is_paid"       gorm:"default:false"`
+	IsPaid       bool      `json:"is_paid"       gorm:"default:true"`
 	PhoneNumber  string    `json:"phone_number"`
 	College      string    `json:"college"`
 	Github       string    `json:"github"`
