@@ -563,30 +563,43 @@ func UpdateUser(c *fiber.Ctx) error {
 			JSON(fiber.Map{"status": false, "message": "Error parsing JSON"})
 	}
 
-	validator := validator.New()
-	if err := validator.Struct(request); err != nil {
-		log.Println(err.Error())
-		return c.Status(fiber.StatusNotAcceptable).
-			JSON(fiber.Map{"status": false, "message": "Please pass in all the fields"})
-	}
-
 	user := c.Locals("user").(models.User)
 
-	dob, err := time.Parse("2006-01-02", request.DateOfBirth)
-	if err != nil {
-		return c.Status(fiber.StatusBadRequest).
-			JSON(fiber.Map{"status": false, "message": "Invalid date of birth format"})
+	var dob time.Time
+	var err error
+	if request.DateOfBirth != "" {
+		dob, err = time.Parse("2006-01-02", request.DateOfBirth)
+		if err != nil {
+			return c.Status(fiber.StatusBadRequest).
+				JSON(fiber.Map{"status": false, "message": "Invalid date of birth format"})
+		}
 	}
 
-	user.FirstName = request.FirstName
-	user.LastName = request.LastName
+	if request.FirstName != "" {
+		user.FirstName = request.FirstName
+	}
+	if request.LastName != "" {
+		user.LastName = request.LastName
+	}
 	user.DateOfBirth = dob
-	user.College = request.College
-	user.Bio = request.Bio
-	user.Gender = request.Gender
-	user.PhoneNumber = request.PhoneNumber
-	user.Github = request.Github
-	user.Country = request.Country
+	if request.College != "" {
+		user.College = request.College
+	}
+	if request.Bio != "" {
+		user.Bio = request.Bio
+	}
+	if request.Gender != "" {
+		user.Gender = request.Gender
+	}
+	if request.PhoneNumber != "" {
+		user.PhoneNumber = request.PhoneNumber
+	}
+	if request.Github != "" {
+		user.Github = request.Github
+	}
+	if request.Country != "" {
+		user.Country = request.Country
+	}
 
 	result := database.DB.Save(&user)
 	if result.Error != nil {

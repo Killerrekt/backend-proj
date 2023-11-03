@@ -15,7 +15,7 @@ import (
 
 func main() {
 	app := fiber.New()
-
+	config.SanityCheck()
 	redisConfig, err := config.LoadRedisConfig()
 	if err != nil {
 		log.Fatalln("Failed to load redis environment variable! \n", err.Error())
