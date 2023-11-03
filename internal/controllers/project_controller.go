@@ -20,16 +20,16 @@ func CreateProject(c *fiber.Ctx) error { // this will both create
 
 	if err := c.BodyParser(&createproject); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(&fiber.Map{
-			"status": false,
-			"error":  "Failed to parse the body",
+			"status":  false,
+			"message": "Failed to parse the body",
 		})
 	}
 
 	err := validate.Struct(createproject)
 	if err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(&fiber.Map{
-			"status": false,
-			"error":  "The request didn't provide sufficient data",
+			"status":  false,
+			"message": "The request didn't provide sufficient data",
 		})
 	}
 
@@ -37,8 +37,8 @@ func CreateProject(c *fiber.Ctx) error { // this will both create
 	database.DB.Find(&team, "team_id = ?", user.TeamID) // maybe changed in future
 	if team.TeamID == 0 {
 		return c.Status(fiber.StatusBadRequest).JSON(&fiber.Map{
-			"status": false,
-			"error":  "The team ID provided doesn't exists",
+			"status":  false,
+			"message": "The team ID provided doesn't exists",
 		})
 	}
 
@@ -50,8 +50,8 @@ func CreateProject(c *fiber.Ctx) error { // this will both create
 	) // maybe changed in future to ID instead of TeamID
 	if project.ID != 0 && project.IsFinal {
 		return c.Status(fiber.StatusForbidden).JSON(&fiber.Map{
-			"status": false,
-			"error":  "The project submission have been finalized",
+			"status":  false,
+			"message": "The project submission have been finalized",
 		})
 	}
 
@@ -59,8 +59,8 @@ func CreateProject(c *fiber.Ctx) error { // this will both create
 
 	if project.ID != 0 {
 		return c.Status(fiber.StatusBadRequest).JSON(&fiber.Map{
-			"error":  "the project is already created",
-			"status": false,
+			"message": "the project is already created",
+			"status":  false,
 		})
 	}
 	createproject.IsFinal = false
@@ -72,8 +72,8 @@ func CreateProject(c *fiber.Ctx) error { // this will both create
 	errstring = DBerrorHandling(dberr)
 	if errstring != "" {
 		return c.Status(fiber.StatusBadRequest).JSON(&fiber.Map{
-			"error":  errstring,
-			"status": false,
+			"message": errstring,
+			"status":  false,
 		})
 	}
 	return c.Status(fiber.StatusAccepted).JSON(&fiber.Map{
@@ -91,15 +91,15 @@ func GetProject(c *fiber.Ctx) error {
 	errstring := DBerrorHandling(err)
 	if errstring != "" {
 		return c.Status(fiber.StatusBadRequest).JSON(&fiber.Map{
-			"error":  errstring,
-			"status": false,
+			"message": errstring,
+			"status":  false,
 		})
 	}
 
 	if getproject.ID == 0 {
 		return c.Status(fiber.StatusBadRequest).JSON(&fiber.Map{
-			"status": false,
-			"error":  "The user hasn't created any project yet that can be viewed",
+			"status":  false,
+			"message": "The user hasn't created any project yet that can be viewed",
 		})
 	}
 
@@ -115,8 +115,8 @@ func GetAllProject(c *fiber.Ctx) error {
 	errstring := DBerrorHandling(err)
 	if errstring != "" {
 		return c.Status(fiber.StatusBadRequest).JSON(&fiber.Map{
-			"error":  errstring,
-			"status": false,
+			"message": errstring,
+			"status":  false,
 		})
 	}
 
@@ -132,15 +132,15 @@ func DeleteProject(c *fiber.Ctx) error {
 	database.DB.Find(&project, "team_id = ?", user.TeamID)
 	if project.ID == 0 {
 		return c.Status(fiber.StatusBadRequest).JSON(&fiber.Map{
-			"status": false,
-			"error":  "Project by the user doesn't exists",
+			"status":  false,
+			"message": "Project by the user doesn't exists",
 		})
 	}
 	err := database.DB.Unscoped().Delete(&project)
 	if check := DBerrorHandling(err); check != "" {
 		return c.Status(fiber.StatusBadRequest).JSON(&fiber.Map{
-			"error":  check,
-			"status": false,
+			"message": check,
+			"status":  false,
 		})
 	}
 	return c.Status(fiber.StatusBadRequest).JSON(&fiber.Map{
@@ -154,16 +154,16 @@ func FinaliseProject(c *fiber.Ctx) error {
 	user := c.Locals("user").(models.User)
 	if !user.IsLeader {
 		return c.Status(fiber.StatusBadRequest).JSON(&fiber.Map{
-			"status": false,
-			"error":  "The user is not the leader",
+			"status":  false,
+			"message": "The user is not the leader",
 		})
 	}
 	var project models.Project
 	database.DB.Find(&project, "team_id = ?", user.TeamID)
 	if project.IsFinal {
 		return c.Status(fiber.StatusBadRequest).JSON(&fiber.Map{
-			"status": false,
-			"error":  "The project is already finalised",
+			"status":  false,
+			"message": "The project is already finalised",
 		})
 	}
 	project.IsFinal = true
@@ -181,8 +181,8 @@ func UpdateProject(c *fiber.Ctx) error {
 
 	if err := c.BodyParser(&updateproject); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(&fiber.Map{
-			"error":  "failed to parse the body",
-			"status": false,
+			"message": "failed to parse the body",
+			"status":  false,
 		})
 	}
 
@@ -190,20 +190,20 @@ func UpdateProject(c *fiber.Ctx) error {
 	err := database.DB.Find(&currproject, "team_id = ?", user.TeamID)
 	if check := DBerrorHandling(err); check != "" {
 		return c.Status(fiber.StatusBadRequest).JSON(&fiber.Map{
-			"error":  check,
-			"status": false,
+			"message": check,
+			"status":  false,
 		})
 	}
 
 	if currproject.ID == 0 {
 		return c.Status(fiber.StatusBadRequest).JSON(&fiber.Map{
-			"error":  "no project exist for this team",
-			"status": false,
+			"message": "no project exist for this team",
+			"status":  false,
 		})
 	} else if currproject.IsFinal {
 		return c.Status(fiber.StatusBadRequest).JSON(&fiber.Map{
-			"error":  "the project has been finalized and can't be changed",
-			"status": true,
+			"message": "the project has been finalized and can't be changed",
+			"status":  true,
 		})
 	}
 
@@ -226,8 +226,8 @@ func UpdateProject(c *fiber.Ctx) error {
 	err = database.DB.Save(&currproject)
 	if check := DBerrorHandling(err); check != "" {
 		return c.Status(fiber.StatusBadRequest).JSON(&fiber.Map{
-			"error":  check,
-			"status": false,
+			"message": check,
+			"status":  false,
 		})
 	}
 
@@ -258,7 +258,7 @@ func UpdateProject(c *fiber.Ctx) error {
 	if err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(&fiber.Map{
 			"status": false,
-			"error":  "Unable to parse the body",
+			"message":  "Unable to parse the body",
 		})
 	}
 	return c.Status(fiber.StatusAccepted).JSON(&fiber.Map{

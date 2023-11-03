@@ -8,21 +8,21 @@ import (
 )
 
 func CreateIdea(c *fiber.Ctx) error {
-	var req models.Idea
+	var request models.IdeaRequest
 
-	if err := c.BodyParser(&req); err != nil {
+	if err := c.BodyParser(&request); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(&fiber.Map{
-			"error":  "unable to parse the body",
-			"status": false,
+			"message": "unable to parse the body",
+			"status":  false,
 		})
 	}
 
 	validate := validator.New()
 
-	if err := validate.Struct(req); err != nil {
+	if err := validate.Struct(request); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(&fiber.Map{
-			"error":  "Missing required fields(Title and Description)",
-			"status": false,
+			"message": "Missing required fields(Title and Description)",
+			"status":  false,
 		})
 	}
 
@@ -31,8 +31,8 @@ func CreateIdea(c *fiber.Ctx) error {
 	database.DB.Find(&check, "team_id = ?", user.TeamID)
 	if check.TeamID == 0 {
 		return c.Status(fiber.StatusBadRequest).JSON(&fiber.Map{
-			"error":  "Team ID of the user doesn't exists",
-			"status": false,
+			"message": "Team ID of the user doesn't exists",
+			"status":  false,
 		})
 	}
 
@@ -40,15 +40,24 @@ func CreateIdea(c *fiber.Ctx) error {
 	database.DB.Find(&exists, "team_id = ?", user.TeamID)
 	if exists.ID != 0 {
 		return c.Status(fiber.StatusBadRequest).JSON(&fiber.Map{
-			"error":  "Idea already exists(use update route)",
-			"status": false,
+			"message": "Idea already exists(use update route)",
+			"status":  false,
 		})
 	}
 
-	req.TeamID = user.TeamID
+	req := models.Idea{
+		TeamID:    user.TeamID,
+		Title:     request.Title,
+		Desc:      request.Desc,
+		Track:     request.Track,
+		VideoLink: request.VideoLink,
+		FigmaLink: request.FigmaLink,
+		DriveLink: request.DriveLink,
+	}
+
 	if err := database.DB.Create(&req); err.Error != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(&fiber.Map{
-			"error":    "Something went wrong while saving the idea",
+			"message":  "Something went wrong while saving the idea",
 			"db_error": err,
 			"status":   false,
 		})
@@ -63,6 +72,8 @@ func CreateIdea(c *fiber.Ctx) error {
 
 func UpdateIdea(c *fiber.Ctx) error {
 	var req struct {
+		Title     string `json:"title"`
+		Track     string `json:"track"`
 		FigmaLink string `json:"figma_link"`
 		DriveLink string `json:"drive_link"`
 		VideoLink string `json:"video_link"`
@@ -71,8 +82,8 @@ func UpdateIdea(c *fiber.Ctx) error {
 
 	if err := c.BodyParser(&req); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(&fiber.Map{
-			"error":  "unable to parse the body",
-			"status": false,
+			"message": "unable to parse the body",
+			"status":  false,
 		})
 	}
 
@@ -81,11 +92,14 @@ func UpdateIdea(c *fiber.Ctx) error {
 	database.DB.Find(&exists, "team_id = ?", user.TeamID)
 	if exists.ID == 0 {
 		return c.Status(fiber.StatusBadRequest).JSON(&fiber.Map{
-			"error":  "No idea exist under this user(try create route)",
-			"status": false,
+			"message": "No idea exist under this user(try create route)",
+			"status":  false,
 		})
 	}
 
+	if req.Title != "" {
+		exists.Title = req.Title
+	}
 	if req.FigmaLink != "" {
 		exists.FigmaLink = req.FigmaLink
 	}
@@ -101,8 +115,8 @@ func UpdateIdea(c *fiber.Ctx) error {
 
 	if err := database.DB.Save(&exists); err.Error != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(&fiber.Map{
-			"error":  "something went wrong in updating",
-			"status": false,
+			"message": "something went wrong in updating",
+			"status":  false,
 		})
 	}
 	return c.Status(fiber.StatusBadRequest).JSON(&fiber.Map{
@@ -118,14 +132,14 @@ func DeleteIdea(c *fiber.Ctx) error {
 	database.DB.Find(&exist, "team_id = ?", user.TeamID)
 	if exist.ID == 0 {
 		return c.Status(fiber.StatusBadRequest).JSON(&fiber.Map{
-			"error":  "No idea exists that can be deleted",
-			"status": false,
+			"message": "No idea exists that can be deleted",
+			"status":  false,
 		})
 	}
 	if err := database.DB.Unscoped().Delete(&exist); err.Error != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(&fiber.Map{
-			"error":  "something went wrong while deleting the idea",
-			"status": false,
+			"message": "something went wrong while deleting the idea",
+			"status":  false,
 		})
 	}
 	return c.Status(fiber.StatusAccepted).JSON(&fiber.Map{
@@ -141,8 +155,8 @@ func GetIdea(c *fiber.Ctx) error {
 	database.DB.Find(&exist, "team_id = ?", user.TeamID)
 	if exist.ID == 0 {
 		return c.Status(fiber.StatusBadRequest).JSON(&fiber.Map{
-			"error":  "No idea exists",
-			"status": false,
+			"message": "No idea exists",
+			"status":  false,
 		})
 	}
 	return c.Status(fiber.StatusAccepted).JSON(&fiber.Map{

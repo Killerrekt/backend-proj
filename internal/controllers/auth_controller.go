@@ -1,6 +1,7 @@
 package controllers
 
 import (
+	"errors"
 	"log"
 	"time"
 
@@ -9,9 +10,11 @@ import (
 	"github.com/redis/go-redis/v9"
 	"github.com/spf13/viper"
 	"golang.org/x/crypto/bcrypt"
+	"gorm.io/gorm"
 
 	"www.github.com/ic-ETITE-24/icetite-24-backend/internal/database"
 	"www.github.com/ic-ETITE-24/icetite-24-backend/internal/models"
+	"www.github.com/ic-ETITE-24/icetite-24-backend/internal/services"
 	"www.github.com/ic-ETITE-24/icetite-24-backend/internal/utils"
 )
 
@@ -117,26 +120,40 @@ func Login(c *fiber.Ctx) error {
 }
 
 func Refresh(c *fiber.Ctx) error {
-	var tokenReq struct {
+	var request struct {
 		RefreshToken string `json:"refresh_token" validate:"required"`
 	}
 
-	if err := c.BodyParser(&tokenReq); err != nil {
+	if err := c.BodyParser(&request); err != nil {
 		return c.Status(fiber.StatusBadRequest).
 			JSON(fiber.Map{"status": false, "message": "Could not process JSON"})
 	}
 
 	validator := validator.New()
 
-	if err := validator.Struct(tokenReq); err != nil {
+	if err := validator.Struct(request); err != nil {
 		log.Println(err.Error())
 		return c.Status(fiber.StatusNotAcceptable).
 			JSON(fiber.Map{"status": false, "message": "Please pass in the correct data"})
 	}
 
-	local := c.Locals("user")
+	email, err := database.RedisClient.Get(request.RefreshToken)
+	if err != nil {
+		if err == redis.Nil {
+			return c.Status(fiber.StatusBadRequest).
+				JSON(fiber.Map{"status": false, "message": "User not logged in"})
+		}
+	}
 
-	user := local.(models.User)
+	user, err := services.FindUserByEmail(email)
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"status": false, "message": "User not found"})
+		}
+		log.Println(err.Error())
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"status": false, "message": err.Error()})
+	}
+
 	payload := utils.TokenPayload{
 		Email: user.Email,
 		Role:  user.Role,
