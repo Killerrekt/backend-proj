@@ -15,11 +15,7 @@ func GenerateUniqueTeamCode() (string, error) {
 	var team models.Team
 	for {
 		code := fmt.Sprintf("%06s", uuid.New().String()[:6])
-		result := database.DB.Where("code = ?", code).
-			Preload("Users").
-			Preload("Project").
-			Preload("Idea").
-			First(&team)
+		result := database.DB.Where("code = ?", code).First(&team)
 
 		if result.Error != nil {
 			if errors.Is(result.Error, gorm.ErrRecordNotFound) {
