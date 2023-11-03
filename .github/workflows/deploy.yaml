@@ -20,4 +20,4 @@ jobs:
           script: |
             cd icetite-24-backend/
             git pull origin main 
-            echo "${{ secrets.SSH_KEY }}" | sudo -S docker-compose up -d --build
+            echo "${{ secrets.SSH_KEY }}" | sudo -S docker compose up -d --build
