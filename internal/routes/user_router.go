@@ -12,7 +12,7 @@ func UserRoutes(incomingRoutes *fiber.App) {
 	userRouter.Post("/refresh", controller.Refresh)
 	userRouter.Post("/signup", controller.CreateUser)
 	userRouter.Post("/login", controller.Login)
-	userRouter.Get("/logout", controller.Logout)
+	userRouter.Post("/logout", controller.Logout)
 	userRouter.Post("/forgot", controller.SendForgotPasswordOTP)
 	userRouter.Patch("/forgot", controller.VerifyForgotPasswordOTP)
 	userRouter.Post("/verify", controller.SendVerifyUserOTP)
