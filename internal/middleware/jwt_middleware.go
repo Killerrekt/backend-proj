@@ -1,207 +1,72 @@
 package middleware
 
 import (
-	"fmt"
+	"errors"
 	"log"
-	"strings"
-	"time"
 
+	jwtware "github.com/gofiber/contrib/jwt"
 	"github.com/gofiber/fiber/v2"
 	"github.com/golang-jwt/jwt/v5"
-	"github.com/redis/go-redis/v9"
 	"github.com/spf13/viper"
-
+	"gorm.io/gorm"
 	"www.github.com/ic-ETITE-24/icetite-24-backend/internal/database"
 	"www.github.com/ic-ETITE-24/icetite-24-backend/internal/models"
+	"www.github.com/ic-ETITE-24/icetite-24-backend/internal/services"
 )
 
-func VerifyAccessToken(c *fiber.Ctx) error {
-	tokenString := c.Get("Authorization", "")
-
-	if tokenString == "" {
-		return c.Status(fiber.StatusUnauthorized).
-			JSON(fiber.Map{"status": false, "message": "Missing Authorization Header"})
-	}
-
-	if !strings.HasPrefix(tokenString, "Bearer ") {
-		return c.Status(fiber.StatusUnauthorized).
-			JSON(fiber.Map{"status": false, "message": "Invalid Authorization Header Format"})
-	}
-
-	fields := strings.Fields(tokenString)
-
-	var token string
-	if len(fields) > 1 && fields[0] == "Bearer" {
-		token = fields[1]
-	}
-
-	if token == "" {
-		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"status": false, "message": "You are not logged in"})
-	}
-
-	if token == "undefined" {
-		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"status": false, "message": "Please send a valid token"})
-	}
-
-	accessToken, _ := jwt.Parse(token, func(token *jwt.Token) (interface{}, error) {
-		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
-			return nil, fmt.Errorf("invalid signing method")
-		}
-		return []byte(viper.GetString("ACCESS_SECRET_KEY")), nil
+func Protected() fiber.Handler {
+	return jwtware.New(jwtware.Config{
+		SigningKey: jwtware.SigningKey{Key: []byte(viper.GetString("ACCESS_SECRET_KEY"))},
+		ErrorHandler: func(c *fiber.Ctx, err error) error {
+			log.Println(err.Error())
+			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"status": false, "message": "Invalid or expired JWT"})
+		},
 	})
+}
 
-	if claims, ok := accessToken.Claims.(jwt.MapClaims); ok && accessToken.Valid {
-		if float64(time.Now().Unix()) > claims["exp"].(float64) {
-			return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
-				"status": false, "message": "Token Expired",
-			})
+func VerifyAccessToken(c *fiber.Ctx) error {
+	user := c.Locals("user").(*jwt.Token)
+	claims := user.Claims.(jwt.MapClaims)
+
+	person, err := services.FindUserByEmail(claims["sub"].(string))
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"status": false, "message": "User not found"})
 		}
-
-		var user models.User
-		database.DB.Find(&user, "email = ?", claims["sub"])
-
-		if user.ID == 0 {
-			return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
-				"status": false, "message": "Invalid User",
-			})
-		}
-
-		if user.IsBanned {
-			return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
-				"status": false, "message": "User is banned", "banned": true,
-			})
-		}
-
-		if !user.IsPaid {
-			return c.Status(fiber.StatusPaymentRequired).
-				JSON(fiber.Map{"status": false, "message": "User has not paid yet"})
-		}
-
-		c.Locals("user", user)
-		return c.Next()
 	}
 
-	return c.Status(fiber.StatusUnauthorized).
-		JSON(fiber.Map{"status": false, "message": "Invalid Token"})
+	if person.IsBanned {
+		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"status": false, "message": "User is banned"})
+	}
+
+	c.Locals("user", person)
+	return c.Next()
 }
 
 func VerifyAdminToken(c *fiber.Ctx) error {
-	tokenString := c.Get("Authorization")
-
-	if tokenString == "" {
-		return c.Status(fiber.StatusUnauthorized).
-			JSON(fiber.Map{"status": false, "message": "Missing Authorization Header"})
-	}
-
-	if !strings.HasPrefix(tokenString, "Bearer ") {
-		return c.Status(fiber.StatusUnauthorized).
-			JSON(fiber.Map{"status": false, "message": "Invalid Authorization Header Format"})
-	}
-
-	token := strings.TrimPrefix(tokenString, "Bearer ")
-
-	accessToken, _ := jwt.Parse(token, func(token *jwt.Token) (interface{}, error) {
-		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
-			return nil, fmt.Errorf("invalid signing method")
-		}
-		return []byte(viper.GetString("ACCESS_SECRET_KEY")), nil
-	})
-
-	if claims, ok := accessToken.Claims.(jwt.MapClaims); ok && accessToken.Valid {
-		if float64(time.Now().Unix()) > claims["exp"].(float64) {
-			return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
-				"status": false, "message": "Token Expired",
-			})
-		}
-
-		if claims["role"] != "admin" {
-			return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
-				"status": false, "message": "Invalid Role",
-			})
-		}
-
-		var user models.User
-		database.DB.Find(&user, "email = ?", claims["sub"])
-
-		if user.ID == 0 {
-			return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
-				"status": false, "message": "Invalid User",
-			})
-		}
-
-		if user.IsBanned {
-			return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
-				"status": false, "message": "User is banned", "banned": true,
-			})
-		}
-
-		c.Locals("user", user)
-		return c.Next()
-	}
-
-	return c.Status(fiber.StatusUnauthorized).
-		JSON(fiber.Map{"status": false, "message": "Invalid Token"})
-}
-
-func VerifyRefreshToken(c *fiber.Ctx) error {
-	var tokenReq struct {
-		RefreshToken string `json:"refresh_token"`
-	}
-
-	if err := c.BodyParser(&tokenReq); err != nil {
-		return c.Status(fiber.StatusBadRequest).
-			JSON(fiber.Map{"status": false, "message": "Please pass in the refresh_token"})
-	}
-
-	if tokenReq.RefreshToken == "" {
-		return c.Status(fiber.StatusNotAcceptable).
-			JSON(fiber.Map{"status": false, "message": "Please pass in the refresh token"})
-	}
-
-	token := tokenReq.RefreshToken
-
-	email, err := database.RedisClient.Get(tokenReq.RefreshToken)
-
-	if err == redis.Nil {
+	token := c.Locals("user").(*jwt.Token)
+	claims := token.Claims.(jwt.MapClaims)
+	if claims["role"] != "admin" {
 		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
-			"status":  false,
-			"message": "User not logged in",
+			"status": false, "message": "Invalid Role",
 		})
 	}
 
-	if err != nil {
-		log.Println(err.Error())
-		return c.Status(fiber.StatusInternalServerError).
-			JSON(fiber.Map{"status": false, "message": "internal server error"})
+	var user models.User
+	database.DB.Find(&user, "email = ?", claims["sub"])
+
+	if user.ID == 0 {
+		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
+			"status": false, "message": "Invalid User",
+		})
 	}
 
-	accessToken, _ := jwt.Parse(token, func(token *jwt.Token) (interface{}, error) {
-		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
-			return nil, fmt.Errorf("invalid signing method")
-		}
-		return []byte(viper.GetString("REFRESH_SECRET_KEY")), nil
-	})
-
-	if claims, ok := accessToken.Claims.(jwt.MapClaims); ok && accessToken.Valid {
-		if float64(time.Now().Unix()) > claims["exp"].(float64) {
-			return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
-				"status": false, "message": "Token Expired",
-			})
-		}
-
-		var user models.User
-		database.DB.Find(&user, "email = ?", email)
-
-		if user.ID == 0 {
-			return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
-				"status": false, "message": "Invalid User",
-			})
-		}
-
-		c.Locals("user", user)
-		return c.Next()
+	if user.IsBanned {
+		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
+			"status": false, "message": "User is banned", "banned": true,
+		})
 	}
 
-	return c.Status(fiber.StatusUnauthorized).
-		JSON(fiber.Map{"status": false, "message": "Invalid Token"})
+	c.Locals("user", user)
+	return c.Next()
 }

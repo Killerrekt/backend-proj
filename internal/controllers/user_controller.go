@@ -610,8 +610,9 @@ func DeleteUser(c *fiber.Ctx) error {
 	}
 
 	if err := database.DB.Unscoped().Delete(&user).Error; err != nil {
+		log.Println(err.Error())
 		return c.Status(fiber.StatusInternalServerError).
-			JSON(fiber.Map{"status": false, "message": "Some error occurred", "error": err.Error()})
+			JSON(fiber.Map{"status": false, "message": "Some error occurred"})
 	}
 
 	return c.Status(fiber.StatusOK).

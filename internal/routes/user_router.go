@@ -9,7 +9,7 @@ import (
 
 func UserRoutes(incomingRoutes *fiber.App) {
 	userRouter := incomingRoutes.Group("/users")
-	userRouter.Post("/refresh", middleware.VerifyRefreshToken, controller.Refresh)
+	userRouter.Post("/refresh", controller.Refresh)
 	userRouter.Post("/signup", controller.CreateUser)
 	userRouter.Post("/login", controller.Login)
 	userRouter.Get("/logout", controller.Logout)
@@ -17,8 +17,8 @@ func UserRoutes(incomingRoutes *fiber.App) {
 	userRouter.Patch("/forgot", controller.VerifyForgotPasswordOTP)
 	userRouter.Post("/verify", controller.SendVerifyUserOTP)
 	userRouter.Patch("/verify", controller.VerifyUserOTP)
-	userRouter.Get("/me", middleware.VerifyAccessToken, controller.UserDashboard)
-	userRouter.Post("/reset-pass", middleware.VerifyAccessToken, controller.ResetPassword)
-	userRouter.Patch("/update", middleware.VerifyAccessToken, controller.UpdateUser)
-	userRouter.Delete("/delete", middleware.VerifyAccessToken, controller.DeleteUser)
+	userRouter.Get("/me", middleware.Protected(), middleware.VerifyAccessToken, controller.UserDashboard)
+	userRouter.Post("/reset-pass", middleware.Protected(), middleware.VerifyAccessToken, controller.ResetPassword)
+	userRouter.Patch("/update", middleware.Protected(), middleware.VerifyAccessToken, controller.UpdateUser)
+	userRouter.Delete("/delete", middleware.Protected(), middleware.VerifyAccessToken, controller.DeleteUser)
 }
