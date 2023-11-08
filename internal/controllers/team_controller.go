@@ -290,9 +290,26 @@ func LeaveTeam(c *fiber.Ctx) error {
 	if user.TeamID == 0 {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"status": false, "message": "User not part of any team"})
 	}
-
+	teamid := user.TeamID
 	user.TeamID = 0
 	database.DB.Save(&user)
+	var team models.Team
+	err := database.DB.Preload(clause.Associations).Find(&team, "team_id = ?", teamid)
+	if err.Error != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(&fiber.Map{
+			"status": false,
+			"error":  "Failed to check whether or not team is empty",
+		})
+	}
+	if len(team.Users) == 0 {
+		err := services.DeleteTeamByID(teamid)
+		if err != nil {
+			return c.Status(fiber.StatusBadRequest).JSON(&fiber.Map{
+				"status": false,
+				"error":  "Failed to delete the empty team",
+			})
+		}
+	}
 
 	return c.Status(fiber.StatusOK).JSON(fiber.Map{"status": true, "message": "Left team"})
 }
