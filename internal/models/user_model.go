@@ -22,7 +22,7 @@ type User struct {
 	IsApproved   bool      `json:"is_approved"   gorm:"default:false"`
 	IsVerified   bool      `json:"is_verified"   gorm:"default:false"`
 	IsBanned     bool      `json:"is_banned"     gorm:"default:false"`
-	IsPaid       bool      `json:"is_paid"       gorm:"default:false"`
+	IsPaid       bool      `json:"is_paid"       gorm:"default:true"`
 	PhoneNumber  string    `json:"phone_number"`
 	College      string    `json:"college"`
 	Github       string    `json:"github"`
@@ -59,13 +59,13 @@ type UserProfile struct {
 }
 
 type UpdateUser struct {
-	FirstName   string `json:"first_name"    validate:"required"`
-	LastName    string `json:"last_name"     validate:"required"`
-	Gender      string `json:"gender"        validate:"required"`
-	DateOfBirth string `json:"date_of_birth" validate:"required"` // considering "YYYY/MM/DD format"
-	Bio         string `json:"bio"           validate:"required"`
-	PhoneNumber string `json:"phone_number"  validate:"required"`
-	College     string `json:"college"       validate:"required"`
-	Github      string `json:"github"        validate:"required"`
-	Country     string `json:"country"       validate:"required"`
+	FirstName   string `json:"first_name,omitempty"    `
+	LastName    string `json:"last_name,omitempty"     `
+	Gender      string `json:"gender,omitempty"        `
+	DateOfBirth string `json:"date_of_birth,omitempty" ` // considering "YYYY/MM/DD format"
+	Bio         string `json:"bio,omitempty"           `
+	PhoneNumber string `json:"phone_number,omitempty"  `
+	College     string `json:"college,omitempty"       `
+	Github      string `json:"github,omitempty"        `
+	Country     string `json:"country,omitempty"       `
 }

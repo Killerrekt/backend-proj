@@ -46,13 +46,13 @@ func CreateTeam(c *fiber.Ctx) error {
 	_, err := services.FindTeamByName(data.Name)
 	if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
 		return c.Status(fiber.StatusInternalServerError).
-			JSON(fiber.Map{"status": false, "message": "Some error occurred", "error": err.Error()})
+			JSON(fiber.Map{"status": false, "message": "Some error occurred"})
 	}
 
 	code, err := utils.GenerateUniqueTeamCode()
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).
-			JSON(fiber.Map{"status": false, "message": "Some error occurred", "error": err.Error()})
+			JSON(fiber.Map{"status": false, "message": "Some error occurred"})
 	}
 
 	team := models.Team{
@@ -110,7 +110,7 @@ func JoinTeam(c *fiber.Ctx) error {
 				JSON(fiber.Map{"status": false, "message": "Team does not exist"})
 		}
 		return c.Status(fiber.StatusInternalServerError).
-			JSON(fiber.Map{"status": false, "message": "Some error occurred", "error": err.Error()})
+			JSON(fiber.Map{"status": false, "message": "Some error occurred"})
 	}
 
 	if len(team.Users) >= 4 {
@@ -209,8 +209,8 @@ func DeleteTeam(c *fiber.Ctx) error {
 	/*err := */
 	if !user.IsLeader {
 		return c.Status(fiber.StatusBadRequest).JSON(&fiber.Map{
-			"error":  "user is not a leader",
-			"status": false,
+			"message": "user is not a leader",
+			"status":  false,
 		})
 	}
 	services.DeleteTeamByID(uint(id))
